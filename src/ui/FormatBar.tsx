@@ -4,9 +4,10 @@
 import { useEffect, useState, type RefObject } from 'react';
 import type { StateCommand } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
-import { bold, bulletList, insertLink, italic, quote, toggleHeading } from '../editor/formatting';
+import { bold, bulletList, insertLink, italic, quote, toggleComment, toggleHeading } from '../editor/formatting';
+import { Icon, type IconName } from './icons';
 
-const BUTTONS: { label: string; title: string; command: StateCommand; className?: string }[] = [
+const BUTTONS: { label: string; icon?: IconName; title: string; command: StateCommand; className?: string }[] = [
   { label: 'B', title: 'Bold (⌘B)', command: bold, className: 'fmt-bold' },
   { label: 'I', title: 'Italic (⌘I)', command: italic, className: 'fmt-italic' },
   { label: 'H1', title: 'Heading 1 (⌘1)', command: toggleHeading(1) },
@@ -15,6 +16,7 @@ const BUTTONS: { label: string; title: string; command: StateCommand; className?
   { label: '❝', title: 'Quote (⌘\')', command: quote },
   { label: '•', title: 'List (⌘⇧8)', command: bulletList },
   { label: 'Link', title: 'Link (⌘K)', command: insertLink },
+  { label: 'Comment', icon: 'comment', title: 'Comment: not counted as words (⌘/)', command: toggleComment },
 ];
 
 type Props = { viewRef: RefObject<EditorView | null>; floating: boolean };
@@ -38,7 +40,7 @@ export function FormatBar({ viewRef, floating }: Props) {
             view.focus();
           }}
         >
-          {b.label}
+          {b.icon ? <Icon name={b.icon} size={18} /> : b.label}
         </button>
       ))}
     </div>

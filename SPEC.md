@@ -162,8 +162,13 @@ Built 2026-09-21 and checked in Chrome on the Mac at Mac, iPad-portrait and iPho
 - All safety rules, including the .zip download.
 - Automatic tests for sync and safety.
 
-### Phase 2: Notes, search and comfort
-- Notes for sheets and groups, shown as cards, with the paperclip on sheet cards.
+### Phase 1.5: Notes, comments and selection count (published 2026-09-21)
+Checked in Chrome on the Mac with the real Dropbox: adding notes as cards, the paperclip count, the notes file syncing, notes moving to Trash with their sheet, a commented prompt left out of the count and the title, and the selection count. Tests cover reading and writing notes files without disturbing notes you didn't edit.
+- Notes for sheets and groups, shown as cards in a panel beside the editor (full screen on iPhone), with the paperclip on sheet cards. Group notes open from the group's ••• menu.
+- Comments: `<!-- like this -->` text (for prompts and asides) is faded in the editor and left out of the word count, sheet titles and previews. The toolbar's Comment button (⌘/) wraps or unwraps it. Other Markdown apps hide these too, and exports will leave them out.
+- Selection word count: with text selected, the count reads "12 of 1,244 words".
+
+### Phase 2: Search and comfort
 - Search across all sheets.
 - "All", "Last 7 Days" and "Trash" views at the top of the Library.
 - Per-sheet word goals with a progress ring.

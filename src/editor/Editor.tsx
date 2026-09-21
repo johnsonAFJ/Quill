@@ -8,14 +8,16 @@ type Props = {
   readOnly: boolean;
   onChange: (text: string) => void;
   onFocusChange: (focused: boolean) => void;
+  /** The selected text, or "" when nothing is selected. */
+  onSelectionChange: (selected: string) => void;
   viewRef: RefObject<EditorView | null>;
 };
 
-export function Editor({ sheetKey, text, readOnly, onChange, onFocusChange, viewRef }: Props) {
+export function Editor({ sheetKey, text, readOnly, onChange, onFocusChange, onSelectionChange, viewRef }: Props) {
   const parent = useRef<HTMLDivElement>(null);
   // Latest callbacks, so the editor doesn't need rebuilding when they change.
-  const callbacks = useRef({ onChange, onFocusChange });
-  callbacks.current = { onChange, onFocusChange };
+  const callbacks = useRef({ onChange, onFocusChange, onSelectionChange });
+  callbacks.current = { onChange, onFocusChange, onSelectionChange };
 
   const makeState = (doc: string) =>
     createEditorState(
@@ -26,6 +28,10 @@ export function Editor({ sheetKey, text, readOnly, onChange, onFocusChange, view
           callbacks.current.onChange(update.state.doc.toString());
         }
         if (update.focusChanged) callbacks.current.onFocusChange(update.view.hasFocus);
+        if (update.selectionSet || update.docChanged) {
+          const { from, to } = update.state.selection.main;
+          callbacks.current.onSelectionChange(update.state.sliceDoc(from, to));
+        }
       }),
     );
 

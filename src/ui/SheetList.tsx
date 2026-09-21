@@ -73,6 +73,11 @@ export function SheetList({ title, sheets, selectedKey, sort, onSort, onOpen, on
                 {s.title || 'New sheet'}
               </div>
               {s.preview && <div className="card-preview">{s.preview}</div>}
+              {s.hasNotes && (
+                <span className="card-clip" aria-label="Has notes">
+                  <Icon name="paperclip" size={14} />
+                </span>
+              )}
               {(s.conflicts.length > 0 || /\(conflict, /.test(s.name)) && <div className="badge">Conflict</div>}
             </button>
             {trash && (

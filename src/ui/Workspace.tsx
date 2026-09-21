@@ -7,15 +7,19 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { isTouch, prefs } from '../app/device';
 import { buildLibrary, sortSheets, type SortOrder } from '../library/tree';
 import type { Engine } from '../sync/engine';
-import { TRASH, isWithin, keyOf, parentOf } from '../sync/paths';
+import { parseNotes } from '../notes/notes';
+import { TRASH, isWithin, keyOf, notesPathFor, parentOf } from '../sync/paths';
 import { EditorPane } from './EditorPane';
 import { INBOX, LibraryPane, TRASH_VIEW } from './LibraryPane';
+import { NotesPanel } from './NotesPanel';
 import { NameDialog, type MenuItem, type NameRequest } from './Overlays';
 import { SettingsDialog } from './SettingsDialog';
 import { SheetList } from './SheetList';
 
 type Layout = 'wide' | 'medium' | 'narrow';
 type Pane = 'library' | 'sheets' | 'editor';
+/** Whose notes are showing: the open sheet's, or a group's. */
+type NotesTarget = { kind: 'sheet' } | { kind: 'group'; key: string } | null;
 
 const SYNC_AFTER_CHANGE_MS = 2000;
 const SYNC_RETRY_MS = 15_000;
@@ -82,6 +86,7 @@ export function Workspace({ engine, onDisconnect }: Props) {
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [nameRequest, setNameRequest] = useState<NameRequest | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [notesTarget, setNotesTarget] = useState<NotesTarget>(null);
   const collapsed = useMemo(() => new Set(collapsedList), [collapsedList]);
 
   const group = groupKey === TRASH_VIEW ? null : (library.groups.get(groupKey) ?? library.root);
@@ -89,6 +94,18 @@ export function Workspace({ engine, onDisconnect }: Props) {
   const sheet = sheetKey ? engine.get(sheetKey) : undefined;
   const currentKey = sheet?.kind === 'file' ? sheet.key : null;
   const readOnly = sheet ? isWithin(sheet.path, TRASH) : false;
+
+  // ---- Notes ----
+  const notesGroup = notesTarget?.kind === 'group' ? library.groups.get(notesTarget.key) : undefined;
+  const notes =
+    notesTarget?.kind === 'sheet' && sheet?.kind === 'file'
+      ? { path: notesPathFor(sheet.path), label: library.sheets.get(sheet.key)?.title || 'This sheet' }
+      : notesGroup
+        ? { path: `${notesGroup.path}/_Notes.md`, label: notesGroup.name }
+        : null;
+  const notesText = notes ? (engine.get(keyOf(notes.path))?.text ?? '') : '';
+  const sheetNotesCount = sheet?.kind === 'file' ? parseNotes(engine.get(keyOf(notesPathFor(sheet.path)))?.text ?? '').length : 0;
+  const toggleSheetNotes = () => setNotesTarget(notesTarget?.kind === 'sheet' ? null : { kind: 'sheet' });
 
   // A group that no longer exists (deleted on another device): fall back to Inbox.
   useEffect(() => {
@@ -145,6 +162,7 @@ export function Workspace({ engine, onDisconnect }: Props) {
   const backToSheets = () => {
     setSheetKey(leaveSheet());
     setPane('sheets');
+    if (layout === 'narrow') setNotesTarget(null);
   };
 
   const newSheet = () => {
@@ -185,6 +203,7 @@ export function Workspace({ engine, onDisconnect }: Props) {
   const groupMenu: MenuItem[] | undefined =
     group && group !== library.root
       ? [
+          { label: 'Group notes', icon: 'paperclip', onSelect: () => setNotesTarget({ kind: 'group', key: group.key }) },
           { label: 'New group inside…', icon: 'folder', onSelect: () => newGroup(group.path) },
           {
             label: 'Rename group…',
@@ -345,6 +364,19 @@ export function Workspace({ engine, onDisconnect }: Props) {
       onBack={layout === 'narrow' ? backToSheets : undefined}
       onToggleFocus={layout === 'narrow' ? undefined : () => setFocusMode(!focusMode)}
       onToggleWords={() => setShowWords(!showWords)}
+      notesCount={sheetNotesCount}
+      notesOpen={notesTarget?.kind === 'sheet'}
+      onToggleNotes={toggleSheetNotes}
+    />
+  );
+
+  const notesPanel = notes && (
+    <NotesPanel
+      label={notes.label}
+      text={notesText}
+      readOnly={isWithin(notes.path, TRASH)}
+      onChange={(text) => engine.writeFile(notes.path, text)}
+      onClose={() => setNotesTarget(null)}
     />
   );
 
@@ -364,14 +396,28 @@ export function Workspace({ engine, onDisconnect }: Props) {
   };
 
   return (
-    <div className={`workspace ${layout}${focusMode && layout !== 'narrow' ? ' focus' : ''}`} onTouchStart={layout === 'narrow' ? onTouchStart : undefined} onTouchEnd={layout === 'narrow' ? onTouchEnd : undefined}>
+    <div className={`workspace ${layout}${focusMode && layout !== 'narrow' ? ' focus' : ''}${notesPanel && layout === 'wide' ? ' notes-open' : ''}`} onTouchStart={layout === 'narrow' ? onTouchStart : undefined} onTouchEnd={layout === 'narrow' ? onTouchEnd : undefined}>
       {layout === 'narrow' ? (
-        pane === 'library' ? libraryPane : pane === 'sheets' || !currentKey ? sheetList : editorPane
+        notesPanel && (notesTarget?.kind === 'group' || pane === 'editor') ? (
+          notesPanel
+        ) : pane === 'library' ? (
+          libraryPane
+        ) : pane === 'sheets' || !currentKey ? (
+          sheetList
+        ) : (
+          editorPane
+        )
       ) : (
         <>
           {layout === 'wide' && !focusMode && libraryPane}
           {!focusMode && sheetList}
           {editorPane}
+          {layout === 'wide' && notesPanel}
+          {layout === 'medium' && notesPanel && (
+            <div className="drawer-backdrop" onPointerDown={(e) => e.target === e.currentTarget && setNotesTarget(null)}>
+              <div className="drawer right">{notesPanel}</div>
+            </div>
+          )}
           {layout === 'medium' && libraryOpen && (
             <div className="drawer-backdrop" onPointerDown={(e) => e.target === e.currentTarget && setLibraryOpen(false)}>
               <div className="drawer">{libraryPane}</div>

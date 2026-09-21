@@ -7,7 +7,7 @@ import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { Annotation, EditorState, type Extension } from '@codemirror/state';
 import { EditorView, keymap, placeholder } from '@codemirror/view';
 import { tags as t } from '@lezer/highlight';
-import { bold, bulletList, insertLink, italic, quote, toggleHeading } from './formatting';
+import { bold, bulletList, insertLink, italic, quote, toggleComment, toggleHeading } from './formatting';
 
 /** Marks changes that came from Dropbox rather than your typing. */
 export const External = Annotation.define<boolean>();
@@ -27,6 +27,8 @@ const markdownStyle = HighlightStyle.define([
   { tag: t.quote, color: 'var(--quote)' },
   { tag: t.monospace, fontFamily: 'ui-monospace, Menlo, monospace', fontSize: '0.88em' },
   { tag: t.contentSeparator, color: 'var(--mark)' },
+  // <!-- comments --> are for you, not the reader, and don't count as words.
+  { tag: t.comment, color: 'var(--muted)', fontStyle: 'italic' },
 ]);
 
 const theme = EditorView.theme({
@@ -53,6 +55,7 @@ export const formattingKeys = keymap.of([
   { key: 'Mod-k', run: insertLink },
   { key: "Mod-'", run: quote },
   { key: 'Mod-Shift-8', run: bulletList },
+  { key: 'Mod-/', run: toggleComment },
 ]);
 
 export function createEditorState(text: string, readOnly: boolean, listeners: Extension): EditorState {

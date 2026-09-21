@@ -16,6 +16,9 @@ type Props = {
   showWords: boolean;
   menu: MenuItem[];
   banner?: ReactNode;
+  notesCount: number;
+  notesOpen: boolean;
+  onToggleNotes: () => void;
   onChange: (text: string) => void;
   onBack?: () => void;
   onToggleFocus?: () => void;
@@ -23,10 +26,12 @@ type Props = {
 };
 
 export function EditorPane(props: Props) {
-  const { sheetKey, text, readOnly, unsynced, touch, focusMode, showWords, menu, banner, onChange, onBack, onToggleFocus, onToggleWords } = props;
+  const { sheetKey, text, readOnly, unsynced, touch, focusMode, showWords, menu, banner, notesCount, notesOpen, onToggleNotes, onChange, onBack, onToggleFocus, onToggleWords } = props;
   const viewRef = useRef<EditorView | null>(null);
   const [typing, setTyping] = useState(false);
+  const [selected, setSelected] = useState('');
   const words = useMemo(() => (showWords ? wordCount(text) : 0), [showWords, text]);
+  const selectedWords = useMemo(() => (showWords && selected ? wordCount(selected) : 0), [showWords, selected]);
 
   if (!sheetKey) {
     return (
@@ -53,15 +58,20 @@ export function EditorPane(props: Props) {
         <div className="editor-header-end">
           {unsynced && <span className="dot" title="Saved on this device, not in Dropbox yet" />}
           {readOnly && <span className="readonly-label">In Trash</span>}
+          <button className={`icon-button${notesOpen ? ' on' : ''}`} aria-label={`Notes (${notesCount})`} aria-pressed={notesOpen} title="Notes" onClick={onToggleNotes}>
+            <Icon name="paperclip" />
+            {notesCount > 0 && <span className="notes-count">{notesCount}</span>}
+          </button>
           <MenuButton items={menu} label="Sheet actions" />
         </div>
       </header>
       {banner}
       {!touch && !readOnly && !focusMode && <FormatBar viewRef={viewRef} floating={false} />}
-      <Editor sheetKey={sheetKey} text={text} readOnly={readOnly} onChange={onChange} onFocusChange={setTyping} viewRef={viewRef} />
+      <Editor sheetKey={sheetKey} text={text} readOnly={readOnly} onChange={onChange} onFocusChange={setTyping} onSelectionChange={setSelected} viewRef={viewRef} />
       {touch && typing && !readOnly && <FormatBar viewRef={viewRef} floating />}
       {showWords && (
         <button className="word-count" onClick={onToggleWords} title="Hide word count">
+          {selectedWords > 0 ? `${selectedWords.toLocaleString()} of ` : ''}
           {words.toLocaleString()} word{words === 1 ? '' : 's'}
         </button>
       )}

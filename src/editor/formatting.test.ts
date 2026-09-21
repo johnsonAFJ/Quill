@@ -1,6 +1,6 @@
 import { EditorSelection, EditorState, type StateCommand } from '@codemirror/state';
 import { describe, expect, it } from 'vitest';
-import { bold, bulletList, insertLink, italic, quote, toggleHeading } from './formatting';
+import { bold, bulletList, insertLink, italic, quote, toggleComment, toggleHeading } from './formatting';
 
 /** Runs a command on text where "|" marks the cursor or "[" "]" mark a selection. */
 function run(command: StateCommand, input: string): string {
@@ -51,6 +51,22 @@ describe('quotes and lists', () => {
     expect(run(bulletList, '[one\ntwo]')).toBe('- [one\n- two]');
     expect(run(bulletList, '- [one\n- two]')).toBe('[one\ntwo]');
     expect(run(quote, 'a |line')).toBe('> a |line');
+  });
+});
+
+describe('comments', () => {
+  it('wraps the selection in a comment', () => {
+    expect(run(toggleComment, '[Prompt: a storm]\n\nText')).toBe('[<!-- Prompt: a storm -->]\n\nText');
+  });
+  it('unwraps a selected comment, or the one the cursor is in', () => {
+    expect(run(toggleComment, '[<!-- Prompt -->] Text')).toBe('[Prompt] Text');
+    expect(run(toggleComment, '<!-- Pro|mpt --> Text')).toBe('Pro|mpt Text');
+  });
+  it('leaves comments alone when the cursor is outside them', () => {
+    expect(run(toggleComment, '<!-- a --> b|')).toBe('<!-- a --> b<!-- | -->');
+  });
+  it('starts an empty comment with the cursor inside', () => {
+    expect(run(toggleComment, 'a |b')).toBe('a <!-- | -->b');
   });
 });
 

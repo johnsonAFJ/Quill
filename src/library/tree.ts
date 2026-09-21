@@ -120,8 +120,8 @@ export function buildLibrary(entries: Entry[]): Library {
       parent.sheets.push(sheet);
       sheets.set(sheet.key, sheet);
     } else if (role === 'groupNotes') {
-      parent.hasNotes = true;
-    } else if (role === 'sheetNotes') {
+      if (entry.text?.trim()) parent.hasNotes = true;
+    } else if (role === 'sheetNotes' && entry.text?.trim()) {
       notesFor.add(entry.path.slice(0, -SHEET_NOTES_SUFFIX.length).toLowerCase() + '.md');
     }
   }

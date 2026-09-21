@@ -203,6 +203,17 @@ describe('new sheets and groups', () => {
     expect(dropbox.paths()).toEqual(['/Short Stories/Untitled 2026-09-21 1432.md']);
   });
 
+  it('creates a notes file next to its sheet on first write', async () => {
+    dropbox.write('/Essays/Story.md', 'text');
+    const engine = await started();
+    engine.writeFile('/Essays/Story.notes.md', '## Idea\nA lighthouse.\n');
+    await engine.sync();
+    expect(dropbox.text('/Essays/Story.notes.md')).toBe('## Idea\nA lighthouse.\n');
+    engine.writeFile('/Essays/Story.notes.md', '## Idea\nTwo lighthouses.\n');
+    await engine.sync();
+    expect(dropbox.text('/Essays/Story.notes.md')).toBe('## Idea\nTwo lighthouses.\n');
+  });
+
   it('renames a synced sheet together with its notes', async () => {
     dropbox.write('/Draft.md', 'text');
     dropbox.write('/Draft.notes.md', 'notes');

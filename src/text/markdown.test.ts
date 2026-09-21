@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { previewOf, safeFileName, titleOf, untitledName, wordCount } from './markdown';
 
 describe('titleOf', () => {
+  it('skips a comment at the top', () => {
+    expect(titleOf('<!-- Prompt: a storm\nat sea -->\n# The Storm\nText')).toBe('The Storm');
+    expect(previewOf('<!-- prompt -->\n# The Storm\nThe waves rose.')).toBe('The waves rose.');
+  });
+
   it('takes the first non-empty line without Markdown symbols', () => {
     expect(titleOf('\n\n# The *First* Morning\n\nText')).toBe('The First Morning');
     expect(titleOf('> A quote')).toBe('A quote');
@@ -16,6 +21,11 @@ describe('previewOf', () => {
 });
 
 describe('wordCount', () => {
+  it('leaves comments out', () => {
+    expect(wordCount('<!-- Prompt: write about a storm at sea. -->\n\nThe waves rose.')).toBe(3);
+    expect(wordCount('Before <!-- aside --> after')).toBe(2);
+  });
+
   it('counts words, not Markdown symbols', () => {
     expect(wordCount('# A title\n\nIt’s **very** [short](https://x.y) - really.')).toBe(6);
     expect(wordCount('')).toBe(0);

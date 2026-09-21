@@ -89,6 +89,13 @@ export class Engine {
     this.put({ ...file, text, dirty: true, version: (file.version ?? 0) + 1, localModified: this.now() });
   }
 
+  /** Saves text to an exact path, creating the file if needed (used for notes files). */
+  writeFile(path: string, text: string): void {
+    const existing = this.files.get(keyOf(path));
+    if (existing) return this.setText(existing.key, text);
+    this.put({ id: newId(), key: keyOf(path), path, kind: 'file', text, dirty: true, version: 1, localModified: this.now() });
+  }
+
   /** A new, empty "Untitled …" sheet. It isn't sent to Dropbox until it has text. */
   createSheet(folder: string): LocalFile {
     const path = this.freePath(folder, untitledName(new Date(this.now())), '.md');

@@ -14,6 +14,8 @@ const paths = {
   restore: 'M4 12a8 8 0 1 0 2.3-5.6M4 4v4h4',
   expand: 'M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7',
   sort: 'M7 4v16M4 17l3 3 3-3M14 6h7M14 12h5M14 18h3',
+  comment: 'M5 5h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-8l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM8 10h.01M12 10h.01M16 10h.01',
+  paperclip: 'M20 11.5l-8.2 8.2a5 5 0 0 1-7-7l8.5-8.5a3.3 3.3 0 0 1 4.7 4.7l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4l7.8-7.8',
 } as const;
 
 export type IconName = keyof typeof paths;

@@ -106,6 +106,36 @@ export const insertLink: StateCommand = ({ state, dispatch }) => {
   return true;
 };
 
+/**
+ * Turns the selection into a comment (<!-- … -->), which doesn't count as
+ * words. With the cursor inside a comment, or a comment selected, it unwraps it.
+ */
+export const toggleComment: StateCommand = ({ state, dispatch }) => {
+  const doc = state.doc.toString();
+  const tr = state.changeByRange((range) => {
+    // A comment around the cursor or selection?
+    const open = doc.lastIndexOf('<!--', range.from);
+    const close = open < 0 ? -1 : doc.indexOf('-->', open + 4);
+    if (open >= 0 && close >= 0 && close + 3 >= range.to && !doc.slice(open, range.from).includes('-->')) {
+      const innerStart = open + 4 + (doc[open + 4] === ' ' ? 1 : 0);
+      const innerEnd = close - (doc[close - 1] === ' ' && close - 1 >= innerStart ? 1 : 0);
+      const changes = state.changes([
+        { from: open, to: innerStart },
+        { from: innerEnd, to: close + 3 },
+      ]);
+      return { changes, range: EditorSelection.range(changes.mapPos(range.anchor, -1), changes.mapPos(range.head, -1)) };
+    }
+    const text = doc.slice(range.from, range.to);
+    const insert = `<!-- ${text} -->`;
+    return {
+      changes: { from: range.from, to: range.to, insert },
+      range: text ? EditorSelection.range(range.from, range.from + insert.length) : EditorSelection.cursor(range.from + 5),
+    };
+  });
+  dispatch(state.update(tr, { scrollIntoView: true, userEvent: 'input.format' }));
+  return true;
+};
+
 export const bold = toggleWrap('**');
 export const italic = toggleWrap('*');
 export const quote = toggleLinePrefix('> ');

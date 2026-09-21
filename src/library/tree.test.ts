@@ -20,9 +20,10 @@ describe('roleOf', () => {
 describe('buildLibrary', () => {
   const library = buildLibrary([
     folder('/Essays'),
-    file('/Essays/_Notes.md'),
+    file('/Essays/_Notes.md', '## Theme\nWalking.'),
     file('/Essays/On Walking.md', '# On Walking\n\nI walk *slowly*.\nEvery day.'),
-    file('/Essays/On Walking.notes.md'),
+    file('/Essays/On Walking.notes.md', '## Ideas\nSlow.'),
+    file('/Essays/Stories/The Lighthouse.notes.md', '\n'),
     file('/Essays/On Walking (conflict, iPhone, Sep 21).md', 'other'),
     folder('/Essays/Stories'),
     file('/Essays/Stories/The Lighthouse.md'),
@@ -51,7 +52,7 @@ describe('buildLibrary', () => {
     expect(library.sheets.get('/loose idea.md')!.title).toBe('Loose Idea');
   });
 
-  it('hides notes files but marks what has notes', () => {
+  it('hides notes files but marks sheets whose notes aren’t empty', () => {
     const essays = library.root.groups[0]!;
     expect(essays.hasNotes).toBe(true);
     expect(library.sheets.get('/essays/on walking.md')!.hasNotes).toBe(true);
