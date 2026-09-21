@@ -1,0 +1,5 @@
+.DS_Store
+node_modules/
+dist/
+# Local Claude Code preview config (has a machine-specific path)
+.claude/
