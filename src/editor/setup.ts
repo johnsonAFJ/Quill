@@ -3,7 +3,7 @@
 
 import { markdown } from '@codemirror/lang-markdown';
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
-import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
+import { defaultKeymap, history, historyKeymap, selectLine } from '@codemirror/commands';
 import { Annotation, EditorState, type Extension } from '@codemirror/state';
 import { EditorView, keymap, placeholder } from '@codemirror/view';
 import { tags as t } from '@lezer/highlight';
@@ -56,6 +56,8 @@ export const formattingKeys = keymap.of([
   { key: "Mod-'", run: quote },
   { key: 'Mod-Shift-8', run: bulletList },
   { key: 'Mod-/', run: toggleComment },
+  // Selects the paragraph (in Markdown, one long wrapped line); again adds the next. Ctrl-L does the same.
+  { key: 'Mod-l', run: selectLine, preventDefault: true },
 ]);
 
 export function createEditorState(text: string, readOnly: boolean, listeners: Extension): EditorState {

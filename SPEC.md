@@ -167,6 +167,7 @@ Checked in Chrome on the Mac with the real Dropbox: adding notes as cards, the p
 - Notes for sheets and groups, shown as cards in a panel beside the editor (full screen on iPhone), with the paperclip on sheet cards. Group notes open from the group's ••• menu.
 - Comments: `<!-- like this -->` text (for prompts and asides) is faded in the editor and left out of the word count, sheet titles and previews. The toolbar's Comment button (⌘/) wraps or unwraps it. Other Markdown apps hide these too, and exports will leave them out.
 - Selection word count: with text selected, the count reads "12 of 1,244 words".
+- ⌘L (or Ctrl-L) selects the paragraph the cursor is in; press again to add the next one.
 
 ### Phase 2: Search and comfort
 - Search across all sheets.
