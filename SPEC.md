@@ -189,6 +189,6 @@ Copy as HTML or formatted text, tags (`#tag` style), side-by-side conflict compa
 
 - `npm install` once, then `npm run dev` runs the test copy at http://localhost:5173/.
 - `npm test` runs the automatic checks. `npm run build` makes the published files (GitHub does this on every push).
-- `npm run icons` redraws the home-screen icons in `public/icons/`.
+- `npm run icons` rebuilds the home-screen icons in `public/icons/` from `design/quill-icon-square.svg` (Alex's icon, as a full square; the original rounded version and its PNGs are also in `design/`). It needs Google Chrome installed.
 
 Where things live: `src/sync/engine.ts` is the sync engine (all the safety rules), `src/sync/dropboxRemote.ts` talks to Dropbox, `src/library/tree.ts` turns files into the Library, `src/editor/` is the editor and formatting commands, `src/ui/` is the screens.
