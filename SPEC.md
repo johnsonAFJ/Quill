@@ -144,11 +144,13 @@ Each phase ends with something you can use on all three devices.
 ### Phase 0: Setup (in progress)
 Done: Dropbox app registered; project created with a setup-check screen (connect Dropbox, show the account, list the folder, write a test sheet); home-screen icon; automatic publishing to GitHub Pages; first tests.
 Sign-in tested on the Mac in Chrome 2026-09-21: connected to the Personal account, wrote and read back `Welcome to Quill.md`, and a second write correctly left it alone.
-Left: publish the repository, install on each device.
+Published and installed on the Mac and iPhone. iPad still to install.
 
 Dropbox app registered, repository and hosting working, an empty Quill installed on iPhone, iPad and Mac that connects to Dropbox and lists the files in its folder.
 
-### Phase 1: Write everywhere (the first real version)
+### Phase 1: Write everywhere (the first real version) (built, testing on devices)
+Built 2026-09-21 and checked in Chrome on the Mac at Mac, iPad-portrait and iPhone sizes: typing, formatting shortcuts, new groups, naming a new sheet from its first line, Trash and Put back, light and dark. 34 automatic tests cover sync and safety (offline edits, conflicts on two devices, blanking guard, Trash never replacing a file). Still to check on real devices: the toolbar above the iPhone keyboard, swipe-back, and a real two-device conflict.
+
 - Library with nested groups, sheet list with title and preview cards, sort by last edited or by name.
 - Create, rename and delete sheets and groups. Deleting goes to Trash, and Trash is visible in the Library so sheets can be restored.
 - Editor with faded Markdown symbols and styled headings, bold and italic.
@@ -182,3 +184,5 @@ Copy as HTML or formatted text, tags (`#tag` style), side-by-side conflict compa
 - `npm install` once, then `npm run dev` runs the test copy at http://localhost:5173/.
 - `npm test` runs the automatic checks. `npm run build` makes the published files (GitHub does this on every push).
 - `npm run icons` redraws the home-screen icons in `public/icons/`.
+
+Where things live: `src/sync/engine.ts` is the sync engine (all the safety rules), `src/sync/dropboxRemote.ts` talks to Dropbox, `src/library/tree.ts` turns files into the Library, `src/editor/` is the editor and formatting commands, `src/ui/` is the screens.

@@ -1,12 +1,11 @@
-// Signing in to Dropbox and talking to the app folder.
+// Signing in to Dropbox.
 //
 // Sign-in uses Dropbox's flow for apps with no server of their own (PKCE):
 // Quill sends you to Dropbox, Dropbox sends you back with a one-time code,
 // and Quill trades that code for a long-lived "refresh token" stored on this
 // device. No password or App secret is ever involved.
 
-import { Dropbox, DropboxAuth, DropboxResponseError, type files } from 'dropbox';
-import type { Entry } from '../library/tree';
+import { Dropbox, DropboxAuth, DropboxResponseError } from 'dropbox';
 
 /** Registered as "Quill Writer" on the Personal Dropbox account. Safe to be public. */
 const APP_KEY = '6k1n5w6asnatzen';
@@ -39,12 +38,11 @@ export async function finishSignInIfReturning(): Promise<string | null> {
   const error = params.get('error_description') ?? params.get('error');
   if (!code && !error) return null;
 
-  const clearUrl = () => history.replaceState(null, '', redirectUri);
   const verifier = localStorage.getItem(VERIFIER_KEY);
   const expectedState = localStorage.getItem(STATE_KEY);
   localStorage.removeItem(VERIFIER_KEY);
   localStorage.removeItem(STATE_KEY);
-  clearUrl();
+  history.replaceState(null, '', redirectUri);
 
   if (error) return `Dropbox didn’t connect: ${error}`;
   if (!verifier || params.get('state') !== expectedState) {
@@ -64,16 +62,16 @@ export function isConnected(): boolean {
   return localStorage.getItem(REFRESH_TOKEN_KEY) !== null;
 }
 
-function client(): Dropbox {
+export function dropboxClient(): Dropbox {
   const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
   if (!refreshToken) throw new Error('Not connected to Dropbox.');
   return new Dropbox({ auth: new DropboxAuth({ clientId: APP_KEY, refreshToken }) });
 }
 
-/** Forgets this device's sign-in and tells Dropbox to cancel it. Files are untouched. */
+/** Forgets this device's sign-in and tells Dropbox to cancel it. Files in Dropbox are untouched. */
 export async function disconnect(): Promise<void> {
   try {
-    await client().authTokenRevoke();
+    await dropboxClient().authTokenRevoke();
   } catch {
     // Offline or already revoked: forgetting it locally is what matters.
   }
@@ -81,62 +79,8 @@ export async function disconnect(): Promise<void> {
 }
 
 export async function accountLabel(): Promise<string> {
-  const { result } = await client().usersGetCurrentAccount();
+  const { result } = await dropboxClient().usersGetCurrentAccount();
   return `${result.name.display_name} (${result.email})`;
-}
-
-/** Every file and folder in the app folder. */
-export async function listEverything(): Promise<Entry[]> {
-  const dbx = client();
-  const entries: Entry[] = [];
-  const add = (items: files.ListFolderResult['entries']) => {
-    for (const item of items) {
-      if (item['.tag'] === 'folder') entries.push({ kind: 'folder', path: item.path_display ?? item.name });
-      if (item['.tag'] === 'file') entries.push({ kind: 'file', path: item.path_display ?? item.name, modified: item.server_modified });
-    }
-  };
-  let page = (await dbx.filesListFolder({ path: '', recursive: true })).result;
-  add(page.entries);
-  while (page.has_more) {
-    page = (await dbx.filesListFolderContinue({ cursor: page.cursor })).result;
-    add(page.entries);
-  }
-  return entries;
-}
-
-const WELCOME_PATH = '/Welcome to Quill.md';
-const WELCOME_TEXT = `# Welcome to Quill
-
-If you can read this in Dropbox, Quill can save files. This sheet is safe to delete.
-`;
-
-/**
- * Proves Quill can write. Uses Dropbox's "add" mode, which refuses to replace
- * an existing file, so this can never overwrite anything.
- * Returns false if the file was already there.
- */
-export async function writeWelcomeSheet(): Promise<boolean> {
-  const dbx = client();
-  // "add" mode quietly succeeds when an identical file exists, so check first
-  // to report honestly. The "add" mode below is still what prevents overwrites.
-  try {
-    await dbx.filesGetMetadata({ path: WELCOME_PATH });
-    return false;
-  } catch (err) {
-    if (!(err instanceof DropboxResponseError && err.status === 409)) throw err;
-  }
-  try {
-    await dbx.filesUpload({
-      path: WELCOME_PATH,
-      contents: WELCOME_TEXT,
-      mode: { '.tag': 'add' },
-      autorename: false,
-    });
-    return true;
-  } catch (err) {
-    if (err instanceof DropboxResponseError && err.status === 409) return false;
-    throw err;
-  }
 }
 
 /** Turns anything thrown by the Dropbox SDK into a sentence worth showing. */
