@@ -14,6 +14,7 @@ import { PROMPTS_PATH, markUsed, mergeBatches, newPromptFile, pickPrompt, prompt
 import { PROMPT_BATCHES } from '../prompts/starter';
 import { TRASH, isWithin, keyOf, notesPathFor, parentOf } from '../sync/paths';
 import { EditorPane } from './EditorPane';
+import { ExportPdf } from './ExportPdf';
 import { ALL_VIEW, INBOX, LibraryPane, PROMPTS_VIEW, RECENT_VIEW, SEARCH_VIEW, SPECIAL_VIEWS, TRASH_VIEW } from './LibraryPane';
 import { NotesPanel } from './NotesPanel';
 import { PromptsPane } from './PromptsPane';
@@ -117,6 +118,7 @@ export function Workspace({ engine, onDisconnect }: Props) {
   /** The last real group you were in; sheets started from Prompts go there. */
   const [lastGroup, setLastGroup] = usePref<string>('lastGroup', INBOX);
   const [query, setQuery] = useState('');
+  const [exporting, setExporting] = useState(false);
   // Updates this device hasn't seen yet pop up once; Settings shows them all.
   const [whatsNew, setWhatsNew] = useState<{ all: boolean } | null>(() => (unseenUpdates().length ? { all: false } : null));
   const collapsed = useMemo(() => new Set(collapsedList), [collapsedList]);
@@ -345,6 +347,7 @@ export function Workspace({ engine, onDisconnect }: Props) {
       : readOnly
       ? [
           { label: 'Put back', icon: 'restore', onSelect: () => setSheetKey(engine.restore(sheet.key)) },
+          { label: 'Export PDF…', onSelect: () => setExporting(true) },
           { label: 'Word count', checked: showWords, onSelect: () => setShowWords(!showWords) },
         ]
       : [
@@ -361,6 +364,8 @@ export function Workspace({ engine, onDisconnect }: Props) {
                 },
               }),
           },
+          { label: 'Export PDF…', onSelect: () => setExporting(true) },
+          'divider',
           { label: 'Word count', checked: showWords, onSelect: () => setShowWords(!showWords) },
           ...(layout === 'narrow' ? [] : [{ label: 'Focus mode', checked: focusMode, onSelect: () => setFocusMode(!focusMode) }]),
           ...typewriterItem,
@@ -602,6 +607,9 @@ export function Workspace({ engine, onDisconnect }: Props) {
           }}
           onClose={() => setSettingsOpen(false)}
         />
+      )}
+      {exporting && sheet?.kind === 'file' && (
+        <ExportPdf text={sheet.text ?? ''} fallbackTitle={library.sheets.get(sheet.key)?.name ?? 'Untitled'} onClose={() => setExporting(false)} />
       )}
       {whatsNew && (
         <WhatsNew

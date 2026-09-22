@@ -13,6 +13,8 @@ export default defineConfig(({ command }) => ({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icons/icon-180.png', 'icons/favicon-32.png'],
+      // The export fonts and page-layout script, so PDFs work offline too.
+      workbox: { globPatterns: ['**/*.{js,css,html,png,woff2}'] },
       manifest: {
         name: 'Quill',
         short_name: 'Quill',

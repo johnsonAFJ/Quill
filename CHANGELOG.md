@@ -2,6 +2,12 @@
 
 Newest first. Each "##" heading is one update. Quill shows the updates you haven't seen yet, once per device, the first time you open it after an update.
 
+## Sep 22 · PDF export
+- **Export PDF** from any sheet's ••• menu, in three styles: **Manuscript** (the standard submission format, double-spaced Courier with your name, contact details and word count on page 1), **Book** (a printed-page look in Garamond with a small-caps title) and **Essay** (clean and modern, with "3 of 7" page numbers).
+- See every page before saving, and switch styles right in the preview. Then **Save as PDF…** opens the print window; choose "Save as PDF" there.
+- Comments and notes are never included. Your name comes from your Dropbox account; change it (or clear it) in the export window.
+- Fixed: long notes couldn't be scrolled.
+
 ## Sep 22 · Prompts, search and typewriter mode
 - **Writing prompts.** Tap the ✦ button in any group for a new sheet that starts with a prompt, tucked in a comment so it doesn't count as words. Quill never gives you the same prompt twice, on any device.
 - **Your prompt list.** "Prompts" in the Library shows how many are left and opens the whole list, so you can add your own (one per line, starting with "- "). Quill started it with 230 of its own.

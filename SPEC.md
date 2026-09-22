@@ -180,8 +180,18 @@ Checked in Chrome on the Mac with the real Dropbox: adding notes as cards, the p
 - **Typewriter mode** (••• menu, Mac and iPad) keeps the line you're typing centered.
 - Any device now names an "Untitled …" sheet from its first line when you leave it (once), not just the device that made it.
 
-### Phase 3: PDF export
-- Export a sheet to PDF with 2–3 styles and a preview before saving. Required on the Mac. iPad is a bonus, and iPhone isn't needed.
+### Phase 3: PDF export (built 2026-09-22)
+- ••• → Export PDF… on any sheet. Three styles (`src/export/styles.ts`), Letter paper, fonts bundled with Quill (SIL Open Font License) so they work offline:
+  - **Manuscript:** Courier Prime 12 pt, double-spaced, 1" margins; name and contact top left and a rounded word count top right on page 1; title a third of the way down with "by Name"; header "Surname / Title / N" from page 2; `#` for scene breaks; END at the finish.
+  - **Book:** EB Garamond 11.5 pt, justified per paragraph with hyphenation; small-caps title with a thin rule and the author; opening paragraph flush with a small-caps first line, indents after; `⁂` for scene breaks; page numbers bottom centre from page 2.
+  - **Essay:** Inter headings over Source Serif 4 11 pt, ragged right, space between paragraphs; big left title with name · date · word count; accent bar on quotes; "N of M" bottom right.
+- Paged.js lays out the pages (Safari's own printing can't do page numbers or running headers); Quill starts it itself after the page loads, because its automatic start can miss its moment and wait forever. Paged.js pauses while the window is hidden and carries on when it's shown.
+- The sheet's leading heading is the title; otherwise its name is. Comments and notes are never included; HTML typed in a sheet is shown as text, never run.
+- Name on exports comes from the Dropbox account until changed; contact details are optional and stored per device only.
+- Saving opens the print window (File → Save as PDF). Required on the Mac; iPad is a bonus; iPhone not needed.
+
+### Phase 4: Seasonal themes
+- Themes that switch on for a date window (e.g. Halloween, Oct 15–31) and back afterwards: colours plus small touches on the frame, never in the writing area, nothing moving. A Settings switch and a "Not this year" button.
 
 ### Ongoing
 - More PDF styles, added one at a time.

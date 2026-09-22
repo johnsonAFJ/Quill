@@ -191,6 +191,8 @@ button.danger {
   display: grid;
   height: 100%;
   overflow: hidden;
+  /* One row exactly as tall as the window, so each column scrolls inside it. */
+  grid-template-rows: minmax(0, 1fr);
 }
 
 /* Column widths are set on the element itself, from what you've dragged them to. */
@@ -198,6 +200,7 @@ button.danger {
 .column {
   position: relative;
   min-width: 0;
+  min-height: 0;
   height: 100%;
 }
 
@@ -258,6 +261,7 @@ button.danger {
 
 .pane-body {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding: 0.25rem 0.5rem calc(env(safe-area-inset-bottom) + 1rem);
@@ -922,4 +926,141 @@ button.danger {
 .whats-new li {
   margin: 0.3rem 0;
   font-size: 0.93rem;
+}
+
+/* ---- PDF export ---- */
+
+.export-dialog {
+  width: min(32rem, 100%);
+}
+
+.style-choices {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+}
+
+.style-choice {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  text-align: left;
+  background: var(--list);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--line);
+  padding: 0.7rem 0.8rem;
+}
+
+.style-choice.on {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.style-sample {
+  flex: none;
+  width: 3rem;
+  height: 3.6rem;
+  border-radius: 4px;
+  background: #fff;
+  color: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+.style-choice.manuscript .style-sample {
+  font-family: 'Courier Prime', 'Courier New', monospace;
+}
+
+.style-choice.book .style-sample {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-variant: small-caps;
+}
+
+.style-choice.essay .style-sample {
+  font-family: Inter, 'Helvetica Neue', sans-serif;
+  font-weight: 700;
+}
+
+.style-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.style-text span {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.field {
+  display: block;
+  margin: 0.6rem 0;
+}
+
+.field > span {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+
+.field textarea {
+  width: 100%;
+  font: inherit;
+  font-size: 16px;
+  padding: 0.55rem 0.7rem;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--list);
+  color: var(--text);
+  resize: vertical;
+}
+
+.small-print {
+  font-size: 0.8rem;
+  margin: 0.4rem 0 0;
+}
+
+.pdf-preview {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  background: #6b6862;
+}
+
+.pdf-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: calc(env(safe-area-inset-top) + 0.5rem) 0.9rem 0.5rem;
+  background: var(--sidebar);
+  border-bottom: 1px solid var(--line);
+}
+
+.pdf-bar .segmented {
+  width: min(20rem, 100%);
+}
+
+.pdf-bar-end {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-left: auto;
+  font-size: 0.85rem;
+}
+
+.pdf-frame {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  background: #6b6862;
+}
+
+.pdf-error {
+  margin: 0.75rem;
 }

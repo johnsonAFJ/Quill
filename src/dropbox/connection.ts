@@ -78,6 +78,12 @@ export async function disconnect(): Promise<void> {
   localStorage.removeItem(REFRESH_TOKEN_KEY);
 }
 
+/** Your name as your Dropbox account has it, e.g. "Alex Johnson". */
+export async function accountName(): Promise<string> {
+  const { result } = await dropboxClient().usersGetCurrentAccount();
+  return result.name.display_name;
+}
+
 export async function accountLabel(): Promise<string> {
   const { result } = await dropboxClient().usersGetCurrentAccount();
   return `${result.name.display_name} (${result.email})`;
