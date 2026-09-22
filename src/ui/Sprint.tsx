@@ -10,7 +10,7 @@ const LENGTHS: (number | null)[] = [10, 15, 25, null];
 export function SprintDialog({ onStart, onClose }: { onStart: (minutes: number | null) => void; onClose: () => void }) {
   return (
     <Dialog title="Sprint" onClose={onClose}>
-      <p className="muted">Keep going forward: backspace only works within the sentence you’re typing, and earlier text fades. Press Esc or ⌥⌘S to stop any time.</p>
+      <p className="muted">Keep going forward: earlier sentences lock and fade, so you can’t click back into them, and backspace only works within the sentence you’re typing. Press Esc or ⌥⌘S to stop any time.</p>
       <div className="sprint-lengths">
         {LENGTHS.map((m) => (
           <button key={String(m)} className={m === null ? 'quiet' : undefined} onClick={() => onStart(m)}>

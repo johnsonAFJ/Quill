@@ -1,9 +1,9 @@
-// Sprint mode: keep going forward. While it's on, backspace and delete only
-// work inside the sentence you're typing, and everything above the current
-// paragraph fades, so there's nothing to go back and fiddle with. Typing,
-// moving around and formatting all work as usual. Nothing is ever lost.
+// Sprint mode: keep going forward. While it's on, everything before the
+// sentence you're writing is locked: the cursor can't be clicked or arrowed
+// back into it, and backspace stops at the start of the sentence. The lock
+// only ever moves forward, and locked text fades. Nothing is ever lost.
 
-import { Compartment, EditorState, RangeSetBuilder, type Extension, type Transaction } from '@codemirror/state';
+import { Compartment, EditorSelection, EditorState, RangeSetBuilder, StateField, type Extension, Transaction } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 import { External } from './annotations';
 
@@ -23,24 +23,49 @@ export function sentenceStart(state: EditorState, pos: number): number {
   return line.from + start;
 }
 
-/** Rejects any typing or deleting that would remove text before the current sentence. */
+/** Everything before this position is locked. It starts where the cursor is and only moves forward. */
+export const sprintLock = StateField.define<number>({
+  create: (state) => sentenceStart(state, state.selection.main.head),
+  update(lock, tr) {
+    const mapped = tr.changes.mapPos(lock, -1);
+    return Math.max(mapped, sentenceStart(tr.state, tr.state.selection.main.head));
+  },
+});
+
+/** Your own typing, deleting, cutting and undoing; formatting buttons only add marks. */
+const WRITING = ['input.type', 'input.paste', 'input.drop', 'input.complete', 'delete', 'undo', 'redo', 'move'];
+
+/** Rejects edits to locked text, and keeps the cursor out of it. */
 const forwardOnly = EditorState.transactionFilter.of((tr: Transaction) => {
-  if (!tr.docChanged || tr.annotation(External)) return tr;
-  // Only your own typing, deleting, cutting and undoing; formatting buttons only add marks.
-  if (!['input.type', 'input.paste', 'input.drop', 'input.complete', 'delete', 'undo', 'redo', 'move'].some((e) => tr.isUserEvent(e))) return tr;
-  const limit = sentenceStart(tr.startState, tr.startState.selection.main.head);
-  let reachesBack = false;
-  tr.changes.iterChanges((fromA, toA) => {
-    if (toA > fromA && fromA < limit) reachesBack = true;
-  });
-  return reachesBack ? [] : tr;
+  if (tr.annotation(External)) return tr;
+  const lock = tr.startState.field(sprintLock, false);
+  if (lock === undefined) return tr;
+  if (tr.docChanged && WRITING.some((e) => tr.isUserEvent(e))) {
+    let reachesBack = false;
+    tr.changes.iterChanges((fromA) => {
+      if (fromA < lock) reachesBack = true;
+    });
+    if (reachesBack) return [];
+  }
+  // A click or arrow into locked text leaves the cursor where it was;
+  // a selection reaching into it (like select-all) is trimmed to the lock.
+  if (!tr.selection || tr.docChanged) return tr;
+  const sel = tr.selection;
+  if (sel.ranges.every((r) => r.from >= lock)) return tr;
+  if (sel.ranges.every((r) => r.empty)) return { effects: tr.effects };
+  const clamped = EditorSelection.create(
+    sel.ranges.map((r) => EditorSelection.range(Math.max(r.anchor, lock), Math.max(r.head, lock))),
+    sel.mainIndex,
+  );
+  return { selection: clamped, effects: tr.effects, scrollIntoView: tr.scrollIntoView, userEvent: tr.annotation(Transaction.userEvent) };
 });
 
 const faded = Decoration.line({ class: 'cm-sprint-faded' });
 
 function fadeAbove(view: EditorView): DecorationSet {
   const builder = new RangeSetBuilder<Decoration>();
-  const current = view.state.doc.lineAt(view.state.selection.main.head).number;
+  const lock = view.state.field(sprintLock, false) ?? view.state.selection.main.head;
+  const current = view.state.doc.lineAt(lock).number;
   for (const { from, to } of view.visibleRanges) {
     for (let pos = from; pos <= to; ) {
       const line = view.state.doc.lineAt(pos);
@@ -65,6 +90,7 @@ const fading = ViewPlugin.fromClass(
 );
 
 export const sprint: Extension = [
+  sprintLock,
   forwardOnly,
   fading,
   EditorView.baseTheme({ '.cm-sprint-faded': { opacity: '0.28', transition: 'opacity 0.3s' } }),

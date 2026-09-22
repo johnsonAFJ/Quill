@@ -2,6 +2,10 @@
 
 Newest first. Each "##" heading is one update. Quill shows the updates you haven't seen yet, once per device, the first time you open it after an update.
 
+## Sep 22 · Sprints really lock, fold any heading
+- **Sprint mode now locks earlier sentences:** you can't click or arrow back into them anymore; the cursor stays where you're writing. Backspace still works within the sentence you're typing.
+- **Fold arrows on `#` headings too,** not just `##` and smaller. The sheet's title (its first line) doesn't get one.
+
 ## Sep 22 · Sprints, quick notes, folding and earlier versions
 - **Sprint mode** (••• → Sprint…, or ⌥⌘S): backspace only works within the sentence you're typing, earlier text fades, and an optional 10, 15 or 25 minute timer counts your new words. Esc ends it.
 - **Quick notes** (⌘⇧J): jot a thought from anywhere in Quill; it's added to the bottom of "Quick Notes" in your Inbox with the date and time.

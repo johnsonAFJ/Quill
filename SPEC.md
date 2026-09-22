@@ -194,10 +194,14 @@ Checked in Chrome on the Mac with the real Dropbox: adding notes as cards, the p
 1. **Hotkeys:** ⌘/ with nothing selected comments out the whole paragraph; a keyboard shortcuts list (••• → Keyboard shortcuts); ⌥⌘N starts a new sheet in the Inbox from anywhere.
 2. **Quick capture (⌘⇧J):** a small box pops up anywhere in Quill; Return adds the text to the bottom of a "Quick Notes" sheet in the Inbox under the date and time, and you're back where you were. (For a truly system-wide shortcut, Apple's Shortcuts app can append to the same Dropbox file.)
 3. **Rewind snapshots:** when a sheet is opened in a new session, a copy is kept on the device; the last 20 per sheet are listed under ••• → Earlier versions with a preview and Restore. Restoring snapshots the current text first.
-4. **Folding:** an arrow beside each `##` heading folds its section away; remembered per device.
+4. **Folding:** an arrow beside each heading (except the sheet's title on its first line) folds its section away; remembered per device.
 5. **Pin a note:** any note card can be pinned; it shows as a slim, read-only, foldable strip at the bottom of the writing area. The pin is saved in the notes file, so every device shows it.
-6. **Sprint mode:** backspace works only within the sentence being typed, earlier text fades, an optional timer (10/15/25 min) and a count of words written in the sprint. Esc or the same shortcut ends it.
+6. **Sprint mode:** everything before the sentence being typed is locked (no clicking or arrowing back into it; backspace stops at the sentence start; the lock only moves forward) and fades, an optional timer (10/15/25 min) and a count of words written in the sprint. Esc or the same shortcut ends it.
 7. **Delete permanently:** a Delete button on items in the Trash view, with a confirmation. Quill only ever deletes from Trash, and only when you choose Delete; Dropbox keeps deleted files for 30 more days.
+
+### Next up
+- **Find and replace in a sheet:** a find bar at the top of the sheet that highlights every match, Enter jumps to the next one, and it can replace one or all. Planned keys: ⌘F in a sheet, library search moves to ⌘⇧F, and "Just the text" gets a new shortcut. (CodeMirror's own search package does most of it.)
+- Try Quill on real devices: iPhone keyboard toolbar, swipe back, a real two-device conflict, the final Save as PDF step, installing on the iPad.
 
 ### Ongoing
 - Seasonal themes, whenever one is wanted: Themes that switch on for a date window (e.g. Halloween, Oct 15–31) and back afterwards: colours plus small touches on the frame, never in the writing area, nothing moving. A Settings switch and a "Not this year" button.

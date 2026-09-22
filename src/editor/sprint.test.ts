@@ -1,6 +1,6 @@
 import { EditorSelection, EditorState } from '@codemirror/state';
 import { describe, expect, it } from 'vitest';
-import { sentenceStart, sprint } from './sprint';
+import { sentenceStart, sprint, sprintLock } from './sprint';
 
 const DOC = 'The tide went out. It kept going! Nobody knew why';
 
@@ -43,5 +43,42 @@ describe('sprint mode', () => {
 
   it('never blocks changes arriving from Dropbox or formatting', () => {
     expect(tryEdit(DOC, end, 0, 3, 'A', 'input.format')).toBe('A tide went out. It kept going! Nobody knew why');
+  });
+});
+
+describe('sprint lock', () => {
+  const end = DOC.length;
+  const nobody = DOC.indexOf('Nobody');
+  const start = () => EditorState.create({ doc: DOC, selection: EditorSelection.cursor(end), extensions: sprint });
+
+  it('won’t let you click back into an earlier sentence', () => {
+    const after = start().update({ selection: EditorSelection.cursor(3), userEvent: 'select.pointer' }).state;
+    expect(after.selection.main.head).toBe(end);
+  });
+
+  it('lets you move around inside the sentence you’re writing', () => {
+    const after = start().update({ selection: EditorSelection.cursor(nobody + 2), userEvent: 'select.pointer' }).state;
+    expect(after.selection.main.head).toBe(nobody + 2);
+  });
+
+  it('keeps select-all out of locked text', () => {
+    const after = start().update({ selection: EditorSelection.range(0, end), userEvent: 'select' }).state;
+    expect(after.selection.main.from).toBe(nobody);
+  });
+
+  it('moves the lock forward as you start new sentences, never back', () => {
+    let state = start().update({ changes: { from: end, insert: '. Then' }, selection: EditorSelection.cursor(end + 6), userEvent: 'input.type' }).state;
+    const then = end + 2;
+    expect(state.field(sprintLock)).toBe(then);
+    state = state.update({ selection: EditorSelection.cursor(nobody), userEvent: 'select.pointer' }).state;
+    expect(state.selection.main.head).toBe(end + 6);
+    expect(state.update({ changes: { from: then - 1, to: then }, userEvent: 'delete.backward' }).state.doc.toString()).toBe(state.doc.toString());
+  });
+
+  it('locks what came before a new paragraph', () => {
+    let state = start().update({ changes: { from: end, insert: '\n' }, selection: EditorSelection.cursor(end + 1), userEvent: 'input.type' }).state;
+    expect(state.field(sprintLock)).toBe(end + 1);
+    state = state.update({ changes: { from: end, to: end + 1 }, userEvent: 'delete.backward' }).state;
+    expect(state.doc.lines).toBe(2);
   });
 });

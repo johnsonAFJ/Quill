@@ -1,13 +1,23 @@
-// Folding sections: a small arrow just left of each "##" (and smaller)
-// heading folds away everything up to the next heading of the same level.
-// The top "#" title doesn't get one; folding it would hide the whole sheet.
+// Folding sections: a small arrow just left of each heading folds away
+// everything up to the next heading of the same level. The sheet's title
+// (a "#" heading on its first line) doesn't get one; folding it would hide
+// the whole sheet.
 // What's folded is remembered on this device, by the headings' text.
 
 import { codeFolding, foldEffect, foldable, foldedRanges, foldKeymap, unfoldEffect } from '@codemirror/language';
 import { RangeSetBuilder, type EditorState, type Extension } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, WidgetType, keymap, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 
-const SECTION_HEADING = /^#{2,6}\s+\S/;
+const HEADING = /^#{1,6}\s+\S/;
+
+/** The line number of the sheet's title, if it starts with a "#" heading. */
+function titleLine(state: EditorState): number {
+  for (let i = 1; i <= state.doc.lines; i++) {
+    const text = state.doc.line(i).text;
+    if (text.trim()) return /^#\s/.test(text) ? i : 0;
+  }
+  return 0;
+}
 
 class FoldArrow extends WidgetType {
   constructor(readonly folded: boolean, readonly pos: number) {
@@ -39,10 +49,11 @@ function isFolded(state: EditorState, from: number, to: number): boolean {
 
 function arrows(view: EditorView): DecorationSet {
   const builder = new RangeSetBuilder<Decoration>();
+  const title = titleLine(view.state);
   for (const { from, to } of view.visibleRanges) {
     for (let pos = from; pos <= to; ) {
       const line = view.state.doc.lineAt(pos);
-      if (SECTION_HEADING.test(line.text)) {
+      if (line.number !== title && HEADING.test(line.text)) {
         const range = foldable(view.state, line.from, line.to);
         if (range) builder.add(line.from, line.from, Decoration.widget({ widget: new FoldArrow(isFolded(view.state, range.from, range.to), line.from), side: -1 }));
       }
