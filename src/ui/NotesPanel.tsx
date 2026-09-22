@@ -1,10 +1,14 @@
 // Notes beside a sheet or group: one card per "## " note in its notes file.
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { prefs } from '../app/device';
 import { addNote, parseNotes, removeNote, updateNote } from '../notes/notes';
+import { wordCount } from '../text/markdown';
 import { Icon } from './icons';
 
 type Props = {
+  /** The notes file, used to remember which notes are folded on this device. */
+  path: string;
   /** "The Lighthouse" or "Essays", shown under the panel title. */
   label: string;
   text: string;
@@ -13,9 +17,26 @@ type Props = {
   onClose: () => void;
 };
 
-export function NotesPanel({ label, text, readOnly, onChange, onClose }: Props) {
+/** Which notes are folded, remembered per device by notes file and heading. */
+function useFolded(path: string) {
+  const [folded, setFolded] = useState<string[]>(() => prefs.get('foldedNotes', []));
+  const id = (title: string, index: number) => `${path.toLowerCase()}\n${title || `#${index}`}`;
+  return {
+    isFolded: (title: string, index: number) => folded.includes(id(title, index)),
+    toggle: (title: string, index: number) => {
+      const key = id(title, index);
+      const next = folded.includes(key) ? folded.filter((k) => k !== key) : [...folded, key];
+      setFolded(next);
+      prefs.set('foldedNotes', next);
+    },
+  };
+}
+
+export function NotesPanel({ path, label, text, readOnly, onChange, onClose }: Props) {
   const notes = parseNotes(text);
-  const [focusLast, setFocusLast] = useState(false);
+  // The note just added, whose title gets focus once.
+  const [focusIndex, setFocusIndex] = useState<number | null>(null);
+  const { isFolded, toggle } = useFolded(path);
 
   return (
     <aside className="pane notes-pane" aria-label="Notes">
@@ -28,7 +49,7 @@ export function NotesPanel({ label, text, readOnly, onChange, onClose }: Props) 
               aria-label="Add note"
               onClick={() => {
                 onChange(addNote(text));
-                setFocusLast(true);
+                setFocusIndex(notes.length);
               }}
             >
               <Icon name="plus" />
@@ -54,7 +75,10 @@ export function NotesPanel({ label, text, readOnly, onChange, onClose }: Props) 
             title={note.title}
             body={note.body}
             readOnly={readOnly}
-            autoFocus={focusLast && i === notes.length - 1}
+            folded={isFolded(note.title, i)}
+            onToggleFold={() => toggle(note.title, i)}
+            autoFocus={focusIndex === i}
+            onAutoFocused={() => setFocusIndex(null)}
             onEdit={(title, body) => onChange(updateNote(text, i, title, body))}
             onDelete={() => {
               if (confirm(`Delete the note “${note.title || 'Untitled'}”?`)) onChange(removeNote(text, i));
@@ -70,12 +94,15 @@ type CardProps = {
   title: string;
   body: string;
   readOnly: boolean;
+  folded: boolean;
+  onToggleFold: () => void;
   autoFocus: boolean;
+  onAutoFocused: () => void;
   onEdit: (title: string, body: string) => void;
   onDelete: () => void;
 };
 
-function NoteCard({ title, body, readOnly, autoFocus, onEdit, onDelete }: CardProps) {
+function NoteCard({ title, body, readOnly, folded, onToggleFold, autoFocus, onAutoFocused, onEdit, onDelete }: CardProps) {
   // What you're typing, untrimmed. The file gets a tidied version.
   const [draft, setDraft] = useState({ title, body });
   const editing = useRef(false);
@@ -88,8 +115,10 @@ function NoteCard({ title, body, readOnly, autoFocus, onEdit, onDelete }: CardPr
   }, [title, body]);
 
   useEffect(() => {
-    if (autoFocus) titleRef.current?.select();
-  }, [autoFocus]);
+    if (!autoFocus) return;
+    titleRef.current?.select();
+    onAutoFocused();
+  }, [autoFocus, onAutoFocused]);
 
   // Grow the text box to fit what's in it.
   useLayoutEffect(() => {
@@ -97,7 +126,7 @@ function NoteCard({ title, body, readOnly, autoFocus, onEdit, onDelete }: CardPr
     if (!el) return;
     el.style.height = 'auto';
     el.style.height = `${el.scrollHeight}px`;
-  }, [draft.body]);
+  }, [draft.body, folded]);
 
   const change = (next: { title: string; body: string }) => {
     setDraft(next);
@@ -113,8 +142,11 @@ function NoteCard({ title, body, readOnly, autoFocus, onEdit, onDelete }: CardPr
   };
 
   return (
-    <div className="note-card">
+    <div className={`note-card${folded ? ' folded' : ''}`}>
       <div className="note-title-row">
+        <button className="icon-button fold" aria-label={folded ? 'Show note' : 'Fold note'} aria-expanded={!folded} onClick={onToggleFold}>
+          <Icon name={folded ? 'chevronRight' : 'chevronDown'} size={14} />
+        </button>
         <input
           ref={titleRef}
           className="note-title"
@@ -125,22 +157,25 @@ function NoteCard({ title, body, readOnly, autoFocus, onEdit, onDelete }: CardPr
           onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), bodyRef.current?.focus())}
           {...focus}
         />
+        {folded && draft.body && <span className="note-folded-count">{wordCount(draft.body).toLocaleString()} words</span>}
         {!readOnly && (
           <button className="icon-button" aria-label="Delete note" onClick={onDelete}>
             <Icon name="trash" size={16} />
           </button>
         )}
       </div>
-      <textarea
-        ref={bodyRef}
-        className="note-body"
-        value={draft.body}
-        placeholder="Write a note…"
-        rows={2}
-        readOnly={readOnly}
-        onChange={(e) => change({ ...draft, body: e.target.value })}
-        {...focus}
-      />
+      {!folded && (
+        <textarea
+          ref={bodyRef}
+          className="note-body"
+          value={draft.body}
+          placeholder="Write a note…"
+          rows={2}
+          readOnly={readOnly}
+          onChange={(e) => change({ ...draft, body: e.target.value })}
+          {...focus}
+        />
+      )}
     </div>
   );
 }

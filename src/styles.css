@@ -193,25 +193,36 @@ button.danger {
   overflow: hidden;
 }
 
-.workspace.wide {
-  grid-template-columns: 250px 330px minmax(0, 1fr);
+/* Column widths are set on the element itself, from what you've dragged them to. */
+
+.column {
+  position: relative;
+  min-width: 0;
+  height: 100%;
 }
 
-.workspace.medium {
-  grid-template-columns: 320px minmax(0, 1fr);
+.resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 9px;
+  z-index: 5;
+  cursor: col-resize;
+  touch-action: none;
 }
 
-.workspace.focus,
-.workspace.narrow {
-  grid-template-columns: minmax(0, 1fr);
+.resize-handle.right {
+  right: -5px;
 }
 
-.workspace.wide.notes-open {
-  grid-template-columns: 250px 330px minmax(0, 1fr) 300px;
+.resize-handle.left {
+  left: -5px;
 }
 
-.workspace.wide.focus.notes-open {
-  grid-template-columns: minmax(0, 1fr) 300px;
+.resize-handle:hover,
+.resize-handle:active {
+  background: linear-gradient(to right, transparent 3px, var(--accent) 3px, var(--accent) 5px, transparent 5px);
+  opacity: 0.6;
 }
 
 .pane {
@@ -756,6 +767,30 @@ button.danger {
   display: flex;
   align-items: center;
   gap: 0.25rem;
+}
+
+.note-card {
+  padding-left: 0.35rem;
+}
+
+.note-card.folded {
+  padding-bottom: 0.5rem;
+}
+
+.icon-button.fold {
+  padding: 0.25rem;
+  flex: none;
+}
+
+.note-folded-count {
+  flex: none;
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.note-card .note-body {
+  padding-left: 1.6rem;
 }
 
 .note-title,

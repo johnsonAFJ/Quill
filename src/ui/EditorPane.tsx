@@ -49,8 +49,8 @@ export function EditorPane(props: Props) {
             <Icon name="back" /> <span>Sheets</span>
           </button>
         ) : onToggleFocus ? (
-          <button className="icon-button" aria-label={focusMode ? 'Show sidebars' : 'Hide sidebars'} title="Focus (⌘⇧F)" onClick={onToggleFocus}>
-            <Icon name={focusMode ? 'sidebar' : 'expand'} />
+          <button className="icon-button" aria-label={focusMode ? 'Show sidebars' : 'Hide a sidebar'} title="Show or hide sidebars (⌘⇧F: just the text)" onClick={onToggleFocus}>
+            <Icon name="sidebar" />
           </button>
         ) : (
           <span />

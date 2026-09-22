@@ -142,9 +142,17 @@ export class Engine {
   trash(key: string): string | null {
     const item = this.files.get(key);
     if (!item || isWithin(item.path, TRASH)) return null;
-    // An empty sheet that never reached Dropbox has nothing worth keeping.
+    // An empty sheet that never reached Dropbox has nothing worth keeping,
+    // but any notes written for it do.
     if (item.kind === 'file' && !item.rev && !item.text) {
+      const notes = this.files.get(keyOf(notesPathFor(item.path)));
       this.remove(item.key);
+      if (notes) {
+        this.ensureFolder(TRASH);
+        this.move(notes, this.freePath(TRASH, stem(baseName(notes.path)), '.md'));
+        const moved = this.byId(notes.id);
+        if (moved) this.put({ ...moved, trashedFrom: parentOf(notes.path) });
+      }
       return null;
     }
     this.ensureFolder(TRASH);

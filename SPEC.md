@@ -168,6 +168,9 @@ Checked in Chrome on the Mac with the real Dropbox: adding notes as cards, the p
 - Comments: `<!-- like this -->` text (for prompts and asides) is faded in the editor and left out of the word count, sheet titles and previews. The toolbar's Comment button (⌘/) wraps or unwraps it. Other Markdown apps hide these too, and exports will leave them out.
 - Selection word count: with text selected, the count reads "12 of 1,244 words".
 - ⌘L (or Ctrl-L) selects the paragraph the cursor is in; press again to add the next one.
+- Notes fold: the arrow beside a note's heading folds it to one line showing its word count. Folding is remembered on each device and never changes the notes file.
+- Columns: drag the divider between columns (Library, sheet list, notes) to resize them; double-click a divider to reset it. The button at the top left of the editor steps through all columns → without the Library → just the text. Widths and which columns show are remembered per device.
+- iPhone opens on the Library, unless you left in the middle of a sheet, in which case it reopens that sheet.
 
 ### Phase 2: Search and comfort
 - Search across all sheets.
@@ -184,6 +187,8 @@ Checked in Chrome on the Mac with the real Dropbox: adding notes as cards, the p
 
 ### Maybe someday
 Copy as HTML or formatted text, tags (`#tag` style), side-by-side conflict comparison, favorites, images in sheets, custom icons per group, revision mode.
+
+Source sheets: research or source documents nested under a sheet in the sheet list (Alex sketched them as Source 1, 2, 3 hanging below the sheet card). Likely stored as a folder like `The Backroom of the Shop (sources)/` next to the sheet. Deferred on 2026-09-21: try sources as folding notes in a resizable notes panel first; build this if long research needs the full editor.
 
 ## Working on Quill
 

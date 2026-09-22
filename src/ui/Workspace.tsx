@@ -12,12 +12,19 @@ import { TRASH, isWithin, keyOf, notesPathFor, parentOf } from '../sync/paths';
 import { EditorPane } from './EditorPane';
 import { INBOX, LibraryPane, TRASH_VIEW } from './LibraryPane';
 import { NotesPanel } from './NotesPanel';
+import { ResizeHandle } from './ResizeHandle';
 import { NameDialog, type MenuItem, type NameRequest } from './Overlays';
 import { SettingsDialog } from './SettingsDialog';
 import { SheetList } from './SheetList';
 
 type Layout = 'wide' | 'medium' | 'narrow';
 type Pane = 'library' | 'sheets' | 'editor';
+/** Which columns show beside the editor on Mac and iPad: the button beside the editor steps through these. */
+type Panes = 'all' | 'noLibrary' | 'editor';
+
+/** Column widths in pixels: [usual, narrowest, widest]. */
+const WIDTHS = { library: [250, 180, 400], list: [330, 240, 560], notes: [300, 240, 600] } as const;
+type Column = keyof typeof WIDTHS;
 /** Whose notes are showing: the open sheet's, or a group's. */
 type NotesTarget = { kind: 'sheet' } | { kind: 'group'; key: string } | null;
 
@@ -78,8 +85,18 @@ export function Workspace({ engine, onDisconnect }: Props) {
   // ---- What's showing ----
   const [groupKey, setGroupKey] = usePref<string>('group', INBOX);
   const [sheetKey, setSheetKey] = usePref<string | null>('sheet', null);
-  const [pane, setPane] = useState<Pane>(() => (prefs.get<string | null>('sheet', null) ? 'editor' : 'sheets'));
-  const [focusMode, setFocusMode] = usePref('focus', false);
+  // iPhone opens on the Library, unless you left in the middle of a sheet.
+  const [pane, setPaneState] = useState<Pane>(() => (prefs.get<Pane>('phonePane', 'library') === 'editor' && prefs.get<string | null>('sheet', null) ? 'editor' : 'library'));
+  const setPane = (p: Pane) => {
+    setPaneState(p);
+    if (layout === 'narrow') prefs.set('phonePane', p);
+  };
+  const [panes, setPanes] = usePref<Panes>('panes', 'all');
+  const [widths, setWidths] = usePref<Record<Column, number>>('widths', { library: WIDTHS.library[0], list: WIDTHS.list[0], notes: WIDTHS.notes[0] });
+  const focusMode = panes === 'editor';
+  const setFocusMode = (on: boolean) => setPanes(on ? 'editor' : 'all');
+  /** All columns → without the Library → just the editor → all again (iPad portrait has no Library column to hide). */
+  const cyclePanes = () => setPanes(panes === 'editor' ? 'all' : panes === 'all' && layout === 'wide' ? 'noLibrary' : 'editor');
   const [showWords, setShowWords] = usePref('words', false);
   const [sort, setSort] = usePref<SortOrder>('sort', 'edited');
   const [collapsedList, setCollapsedList] = usePref<string[]>('collapsed', []);
@@ -192,12 +209,12 @@ export function Workspace({ engine, onDisconnect }: Props) {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'f') {
         e.preventDefault();
-        setFocusMode(!focusMode);
+        setPanes(focusMode ? 'all' : 'editor');
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [focusMode, setFocusMode]);
+  }, [focusMode, setPanes]);
 
   // ---- Menus ----
   const groupMenu: MenuItem[] | undefined =
@@ -362,7 +379,7 @@ export function Workspace({ engine, onDisconnect }: Props) {
       banner={banner}
       onChange={onChange}
       onBack={layout === 'narrow' ? backToSheets : undefined}
-      onToggleFocus={layout === 'narrow' ? undefined : () => setFocusMode(!focusMode)}
+      onToggleFocus={layout === 'narrow' ? undefined : cyclePanes}
       onToggleWords={() => setShowWords(!showWords)}
       notesCount={sheetNotesCount}
       notesOpen={notesTarget?.kind === 'sheet'}
@@ -372,6 +389,7 @@ export function Workspace({ engine, onDisconnect }: Props) {
 
   const notesPanel = notes && (
     <NotesPanel
+      path={notes.path}
       label={notes.label}
       text={notesText}
       readOnly={isWithin(notes.path, TRASH)}
@@ -395,8 +413,36 @@ export function Workspace({ engine, onDisconnect }: Props) {
     else if (pane === 'sheets') setPane('library');
   };
 
+  // ---- Columns ----
+  const showLibrary = layout === 'wide' && panes === 'all';
+  const showList = !focusMode;
+  const showNotes = layout === 'wide' && Boolean(notesPanel);
+  const columns =
+    layout === 'narrow'
+      ? 'minmax(0, 1fr)'
+      : [showLibrary && `${widths.library}px`, showList && `${widths.list}px`, 'minmax(0, 1fr)', showNotes && `${widths.notes}px`].filter(Boolean).join(' ');
+
+  const column = (name: Column, edge: 'left' | 'right', content: ReactNode) => (
+    <div className="column">
+      {content}
+      <ResizeHandle
+        edge={edge}
+        width={widths[name]}
+        min={WIDTHS[name][1]}
+        max={WIDTHS[name][2]}
+        onResize={(w) => setWidths({ ...widths, [name]: w })}
+        onReset={() => setWidths({ ...widths, [name]: WIDTHS[name][0] })}
+      />
+    </div>
+  );
+
   return (
-    <div className={`workspace ${layout}${focusMode && layout !== 'narrow' ? ' focus' : ''}${notesPanel && layout === 'wide' ? ' notes-open' : ''}`} onTouchStart={layout === 'narrow' ? onTouchStart : undefined} onTouchEnd={layout === 'narrow' ? onTouchEnd : undefined}>
+    <div
+      className={`workspace ${layout}${focusMode && layout !== 'narrow' ? ' focus' : ''}`}
+      style={{ gridTemplateColumns: columns }}
+      onTouchStart={layout === 'narrow' ? onTouchStart : undefined}
+      onTouchEnd={layout === 'narrow' ? onTouchEnd : undefined}
+    >
       {layout === 'narrow' ? (
         notesPanel && (notesTarget?.kind === 'group' || pane === 'editor') ? (
           notesPanel
@@ -409,10 +455,10 @@ export function Workspace({ engine, onDisconnect }: Props) {
         )
       ) : (
         <>
-          {layout === 'wide' && !focusMode && libraryPane}
-          {!focusMode && sheetList}
+          {showLibrary && column('library', 'right', libraryPane)}
+          {showList && column('list', 'right', sheetList)}
           {editorPane}
-          {layout === 'wide' && notesPanel}
+          {showNotes && column('notes', 'left', notesPanel)}
           {layout === 'medium' && notesPanel && (
             <div className="drawer-backdrop" onPointerDown={(e) => e.target === e.currentTarget && setNotesTarget(null)}>
               <div className="drawer right">{notesPanel}</div>

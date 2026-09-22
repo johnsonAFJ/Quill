@@ -192,6 +192,16 @@ describe('new sheets and groups', () => {
     expect(engine.get(sheet.key)).toBeUndefined();
   });
 
+  it('keeps the notes of a new sheet that was left empty', async () => {
+    const engine = await started();
+    const sheet = engine.createSheet('');
+    engine.writeFile(sheet.path.replace(/\.md$/, '.notes.md'), '## Idea\nKeep this.\n');
+    await engine.sync();
+    expect(engine.finishEditing(sheet.key)).toBeNull();
+    await engine.sync();
+    expect(dropbox.paths()).toEqual(['/_Trash/Untitled 2026-09-21 1432.notes.md']);
+  });
+
   it('creates and renames a group before it ever reaches Dropbox', async () => {
     const engine = await started();
     const group = engine.createGroup('', 'Stories')!;
