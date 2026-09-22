@@ -84,15 +84,15 @@ export function SheetList({ title, sheets, selectedKey, sort, onSort, onOpen, on
             <button className="card-main" onClick={() => onOpen(s.key)}>
               <div className="card-title">
                 {unsynced.has(s.key) && <span className="dot" aria-label="Not synced yet" />}
-                {s.title || 'New sheet'}
+                <span className="card-name">{s.title || 'New sheet'}</span>
+                {s.hasNotes && (
+                  <span className="card-clip" aria-label="Has notes">
+                    <Icon name="paperclip" size={14} />
+                  </span>
+                )}
               </div>
               {whereOf && <div className="card-where">{whereOf(s.path)}</div>}
               {s.preview && <div className="card-preview">{s.preview}</div>}
-              {s.hasNotes && (
-                <span className="card-clip" aria-label="Has notes">
-                  <Icon name="paperclip" size={14} />
-                </span>
-              )}
               {(s.conflicts.length > 0 || /\(conflict, /.test(s.name)) && <div className="badge">Conflict</div>}
             </button>
             {trash && (

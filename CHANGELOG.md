@@ -2,6 +2,9 @@
 
 Newest first. Each "##" heading is one update. Quill shows the updates you haven't seen yet, once per device, the first time you open it after an update.
 
+## Sep 22 · Tidier sheet list
+- The paperclip on a sheet with notes now sits beside its name instead of on its own line. Long names trim with "…" and the paperclip stays put.
+
 ## Sep 22 · Prompts with direction
 - **60 new prompts with more to go on:** each has a title and a setup with a word count, plus a **Vibe** (the mood), an **Anchor** (the constraint to write within) and an **Aim** (what success looks like). They range from mystery and atmosphere to personal essays, short-form challenges and a few playful ones.
 - Quill hands these out first. Your older one-line prompts are still on the list for after.

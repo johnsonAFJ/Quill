@@ -420,6 +420,10 @@ button.danger {
   gap: 0.4rem;
   font-weight: 600;
   overflow: hidden;
+}
+
+.card-name {
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -751,10 +755,8 @@ button.danger {
 
 .card-clip {
   display: inline-flex;
+  flex: none;
   color: var(--muted);
-  margin-top: 0.35rem;
-  margin-right: 0.4rem;
-  vertical-align: middle;
 }
 
 .notes-body {
