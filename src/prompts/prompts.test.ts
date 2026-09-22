@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { markUsed, mergeBatches, newPromptFile, pickPrompt, promptComment, unusedPrompts, usedCount } from './prompts';
+import { PROMPT_BATCHES } from './starter';
+import { markUsed, mergeBatches, newPromptFile, pickPrompt, promptComment, promptParts, unusedPrompts, usedCount } from './prompts';
 
 const DAY = new Date('2026-09-22T23:30:00'); // late evening, local time
 
@@ -44,6 +45,15 @@ Intro.
   });
 });
 
+describe('picking', () => {
+  it('hands out prompts with direction first, then the plain ones', () => {
+    const file = '- Plain one\n- **Titled** — Do this. Vibe: calm. Anchor: one room. Aim: stillness.\n- Plain two\n';
+    expect(pickPrompt(file, () => 0.99)?.text).toMatch(/^\*\*Titled/);
+    const rest = markUsed(file, pickPrompt(file)!, DAY);
+    expect(pickPrompt(rest, () => 0)?.text).toBe('Plain one');
+  });
+});
+
 describe('Quill’s own prompts', () => {
   const batches = [['A storm at sea', 'A locked drawer'], ['A letter never sent']];
 
@@ -78,5 +88,41 @@ describe('Quill’s own prompts', () => {
 describe('promptComment', () => {
   it('tucks the prompt into a comment so it isn’t counted', () => {
     expect(promptComment('Write about --> arrows')).toBe('<!-- Prompt: Write about —> arrows -->\n\n');
+  });
+});
+
+describe('prompts with direction', () => {
+  const RICH = '**The Wrong Recording** — Write a short vignette about a tape left in a secondhand car. Vibe: quiet dread. Anchor: only what you can hear. Aim: the reader leans closer.';
+
+  it('splits out the title and the Vibe, Anchor and Aim lines', () => {
+    expect(promptParts(RICH)).toEqual({
+      title: 'The Wrong Recording',
+      body: 'Write a short vignette about a tape left in a secondhand car.',
+      details: [
+        { label: 'Vibe', text: 'quiet dread.' },
+        { label: 'Anchor', text: 'only what you can hear.' },
+        { label: 'Aim', text: 'the reader leans closer.' },
+      ],
+    });
+  });
+
+  it('leaves a plain prompt as it is', () => {
+    expect(promptParts('Describe a lighthouse.')).toEqual({ title: null, body: 'Describe a lighthouse.', details: [] });
+  });
+
+  it('writes it into the sheet as a comment, one part per line', () => {
+    expect(promptComment(RICH)).toBe(
+      '<!--\nPrompt: The Wrong Recording\nWrite a short vignette about a tape left in a secondhand car.\nVibe: quiet dread.\nAnchor: only what you can hear.\nAim: the reader leans closer.\n-->\n\n',
+    );
+  });
+});
+
+describe('Quill’s own prompts', () => {
+  it('gives every prompt in batch 2 a title and Vibe, Anchor and Aim lines', () => {
+    const incomplete = PROMPT_BATCHES[1]!.filter((p) => {
+      const parts = promptParts(p);
+      return !parts.title || parts.details.map((d) => d.label).join() !== 'Vibe,Anchor,Aim';
+    });
+    expect(incomplete).toEqual([]);
   });
 });

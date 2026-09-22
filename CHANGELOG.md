@@ -2,6 +2,12 @@
 
 Newest first. Each "##" heading is one update. Quill shows the updates you haven't seen yet, once per device, the first time you open it after an update.
 
+## Sep 22 · Prompts with direction
+- **60 new prompts with more to go on:** each has a title and a setup with a word count, plus a **Vibe** (the mood), an **Anchor** (the constraint to write within) and an **Aim** (what success looks like). They range from mystery and atmosphere to personal essays, short-form challenges and a few playful ones.
+- Quill hands these out first. Your older one-line prompts are still on the list for after.
+- Starting a sheet from one puts the whole prompt at the top as a comment, one part per line, so it isn't counted as words.
+- Write your own the same way on your list: `- **Title** — what to write. Vibe: … Anchor: … Aim: …`
+
 ## Sep 22 · Find and replace
 - **Find and replace in a sheet (⌘F,** or ••• → Find and replace): every match is highlighted, with a "2 of 5" count. Enter jumps to the next one (⇧Enter the one before), Tab moves to "Replace with", and **All** replaces every match. **Aa** matches capitals exactly. Esc closes it. In a sprint it can't change locked text.
 - **Search everything moved to ⌥⌘F.** Press it again, or Esc, to go back to the sheets you were looking at. The search button in the Library works the same way.

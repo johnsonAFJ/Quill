@@ -1,6 +1,7 @@
 // "Prompts" in the Library: how many are left, and one at a time on request.
 
 import { useState } from 'react';
+import { promptParts } from '../prompts/prompts';
 import { Icon } from './icons';
 
 type Props = {
@@ -49,7 +50,7 @@ export function PromptsPane({ unused, used, destination, onTake, onStart, onOpen
       <div className="pane-body">
         {prompt && (
           <div className="prompt-card">
-            <p>{prompt}</p>
+            <PromptText prompt={prompt} />
             <div className="prompt-actions">
               <button onClick={() => onStart(prompt)}>Start a sheet in {destination}</button>
               <button className="quiet" onClick={take}>
@@ -74,5 +75,25 @@ export function PromptsPane({ unused, used, destination, onTake, onStart, onOpen
         </button>
       </div>
     </section>
+  );
+}
+
+function PromptText({ prompt }: { prompt: string }) {
+  const { title, body, details } = promptParts(prompt);
+  return (
+    <>
+      {title && <h2 className="prompt-title">{title}</h2>}
+      <p>{body}</p>
+      {details.length > 0 && (
+        <dl className="prompt-details">
+          {details.map((d) => (
+            <div key={d.label}>
+              <dt>{d.label}</dt>
+              <dd>{d.text}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </>
   );
 }

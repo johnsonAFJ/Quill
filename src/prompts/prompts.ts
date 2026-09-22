@@ -4,6 +4,10 @@
 //   - [ ] Another one (a checkbox is fine too)
 //   - [x] 2026-09-22 · A prompt Quill already gave you
 //
+// A prompt can also carry a title and some direction, still on one line:
+//
+//   - **The Wrong Recording** — What to write. Vibe: … Anchor: … Aim: …
+//
 // Any unticked list item is unused. Quill ticks a prompt and moves it under
 // "## Used" the moment it gives it to you, and because that's written in the
 // file, every device knows. Everything else in the file is left as you wrote it.
@@ -50,8 +54,11 @@ export function markUsed(file: string, prompt: Prompt, date: Date): string {
   return lines.join('\n');
 }
 
+/** A random unused prompt. Ones with a title and direction come first, while any are left. */
 export function pickPrompt(file: string, random: () => number = Math.random): Prompt | null {
-  const prompts = unusedPrompts(file);
+  const unused = unusedPrompts(file);
+  const directed = unused.filter((p) => promptParts(p.text).title);
+  const prompts = directed.length ? directed : unused;
   return prompts.length ? prompts[Math.floor(random() * prompts.length)]! : null;
 }
 
@@ -104,7 +111,30 @@ export function mergeBatches(file: string, batches: string[][]): string {
   return [...before, ...gap, ...items, ...(after.length ? ['', ...after] : []), '', mark, ''].join('\n');
 }
 
-/** The first line of a new sheet written from a prompt. */
+export const DETAIL_LABELS = ['Vibe', 'Anchor', 'Aim'] as const;
+export type PromptParts = { title: string | null; body: string; details: { label: string; text: string }[] };
+
+/** Splits "**Title** — body. Vibe: … Anchor: … Aim: …" into its parts. A plain prompt is all body. */
+export function promptParts(prompt: string): PromptParts {
+  let rest = prompt.trim();
+  let title: string | null = null;
+  const titled = rest.match(/^\*\*(.+?)\*\*\s*[—–-]\s*/);
+  if (titled) {
+    title = titled[1]!.trim();
+    rest = rest.slice(titled[0].length);
+  }
+  const labels = new RegExp(`\\s(${DETAIL_LABELS.join('|')}):\\s`, 'g');
+  const pieces = (' ' + rest).split(labels);
+  const body = pieces[0]!.trim();
+  const details: PromptParts['details'] = [];
+  for (let i = 1; i + 1 < pieces.length; i += 2) details.push({ label: pieces[i]!, text: pieces[i + 1]!.trim() });
+  return { title, body, details };
+}
+
+/** The first lines of a new sheet written from a prompt: a comment, so it isn't counted as words. */
 export function promptComment(prompt: string): string {
-  return `<!-- Prompt: ${prompt.replace(/-->/g, '—>')} -->\n\n`;
+  const { title, body, details } = promptParts(prompt.replace(/-->/g, '—>'));
+  if (!title && details.length === 0) return `<!-- Prompt: ${body} -->\n\n`;
+  const lines = [`Prompt: ${title ?? body}`, ...(title ? [body] : []), ...details.map((d) => `${d.label}: ${d.text}`)];
+  return `<!--\n${lines.join('\n')}\n-->\n\n`;
 }
