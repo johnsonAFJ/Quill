@@ -172,18 +172,24 @@ Checked in Chrome on the Mac with the real Dropbox: adding notes as cards, the p
 - Columns: drag the divider between columns (Library, sheet list, notes) to resize them; double-click a divider to reset it. The button at the top left of the editor steps through all columns → without the Library → just the text. Widths and which columns show are remembered per device.
 - iPhone opens on the Library, unless you left in the middle of a sheet, in which case it reopens that sheet.
 
-### Phase 2: Search and comfort
-- Search across all sheets.
-- "All", "Last 7 Days" and "Trash" views at the top of the Library.
-- Per-sheet word goals with a progress ring.
-- Typewriter mode (current line stays in the middle of the screen).
-- Font choices (3), text size and line spacing.
+### Phase 2: Prompts, search and what's new (built 2026-09-22)
+- **What's new:** `CHANGELOG.md` is the plain-language log of every update. After an update, each device shows the updates it hasn't seen once; Settings → What's new shows them all. A fresh install shows only the latest. Every publish adds an entry.
+- **Prompts:** `_Prompts.md` in the Quill folder, opened from "Prompts" in the Library. One prompt per list line; Quill ticks a prompt and moves it under "## Used" with the date the moment it hands it out, so no device repeats one. Quill seeded it with 230 prompts (`src/prompts/starter.ts`); new batches added there are merged in once, skipping any already in the file, so deleted or used prompts never return. The ✦ button in a group makes a sheet that starts with a prompt as a comment. The list is only created after Quill has heard from Dropbox, so one device can't overwrite another's.
+- **Search** (magnifying glass, ⌘F) across sheets, sheet notes and group notes, every word required, Trash left out. Title matches first.
+- **All** and **Last 7 Days** in the Library, with each sheet's group shown.
+- **Typewriter mode** (••• menu, Mac and iPad) keeps the line you're typing centered.
+- Any device now names an "Untitled …" sheet from its first line when you leave it (once), not just the device that made it.
 
 ### Phase 3: PDF export
 - Export a sheet to PDF with 2–3 styles and a preview before saving. Required on the Mac. iPad is a bonus, and iPhone isn't needed.
 
 ### Ongoing
 - More PDF styles, added one at a time.
+
+### Future ideas
+- Font choices, text size and line spacing (the current look is staying for now).
+- Word goals for each sheet, with a progress ring.
+- A "Writing music" button that opens a chosen playlist in the Spotify or Music app. (A player inside Quill was ruled out: Spotify's web player doesn't work on iPhone or iPad, and Apple Music's needs a $99/year developer membership.)
 
 ### Maybe someday
 Copy as HTML or formatted text, tags (`#tag` style), side-by-side conflict comparison, favorites, images in sheets, custom icons per group, revision mode.
@@ -193,6 +199,7 @@ Source sheets: research or source documents nested under a sheet in the sheet li
 ## Working on Quill
 
 - `npm install` once, then `npm run dev` runs the test copy at http://localhost:5173/.
+- Every publish adds a plain-language entry at the top of `CHANGELOG.md`; that's what the "What's new" pop-up shows.
 - `npm test` runs the automatic checks. `npm run build` makes the published files (GitHub does this on every push).
 - `npm run icons` rebuilds the home-screen icons in `public/icons/` from `design/quill-icon-square.svg` (Alex's icon, as a full square; the original rounded version and its PNGs are also in `design/`). It needs Google Chrome installed.
 

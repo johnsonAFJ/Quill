@@ -183,6 +183,17 @@ describe('new sheets and groups', () => {
     expect(dropbox.paths()).toEqual(['/The Lighthouse.md']);
   });
 
+  it('names an "Untitled" sheet made on another device when you leave it', async () => {
+    dropbox.write('/Stories/Untitled 2026-09-21 1319.md', '# The Backroom of the Shop\n\nIt takes my eyes a moment.');
+    dropbox.write('/Stories/Untitled 2026-09-21 1319.notes.md', '## Critique\nGood.');
+    dropbox.write('/Stories/Untitled 2026-09-21 1320.md', '');
+    const engine = await started();
+    engine.finishEditing(keyOf('/Stories/Untitled 2026-09-21 1319.md'));
+    expect(engine.finishEditing(keyOf('/Stories/Untitled 2026-09-21 1320.md'))).toBe(keyOf('/Stories/Untitled 2026-09-21 1320.md'));
+    await engine.sync();
+    expect(dropbox.paths()).toEqual(['/Stories/The Backroom of the Shop.md', '/Stories/The Backroom of the Shop.notes.md', '/Stories/Untitled 2026-09-21 1320.md']);
+  });
+
   it('throws away a new sheet that was left empty', async () => {
     const engine = await started();
     const sheet = engine.createSheet('');

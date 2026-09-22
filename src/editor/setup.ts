@@ -8,6 +8,7 @@ import { Annotation, EditorState, type Extension } from '@codemirror/state';
 import { EditorView, keymap, placeholder } from '@codemirror/view';
 import { tags as t } from '@lezer/highlight';
 import { bold, bulletList, insertLink, italic, quote, toggleComment, toggleHeading } from './formatting';
+import { typewriter, typewriterSlot } from './typewriter';
 
 /** Marks changes that came from Dropbox rather than your typing. */
 export const External = Annotation.define<boolean>();
@@ -60,7 +61,7 @@ export const formattingKeys = keymap.of([
   { key: 'Mod-l', run: selectLine, preventDefault: true },
 ]);
 
-export function createEditorState(text: string, readOnly: boolean, listeners: Extension): EditorState {
+export function createEditorState(text: string, readOnly: boolean, listeners: Extension, typewriterOn = false): EditorState {
   return EditorState.create({
     doc: text,
     extensions: [
@@ -77,6 +78,7 @@ export function createEditorState(text: string, readOnly: boolean, listeners: Ex
       EditorState.readOnly.of(readOnly),
       EditorView.editable.of(!readOnly),
       theme,
+      typewriterSlot.of(typewriterOn ? typewriter : []),
       listeners,
     ],
   });

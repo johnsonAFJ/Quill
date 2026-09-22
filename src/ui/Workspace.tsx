@@ -4,14 +4,21 @@
 //   iPhone: one screen at a time.
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode, type TouchEvent } from 'react';
+import { markUpdatesSeen, unseenUpdates, updates } from '../app/changelog';
 import { isTouch, prefs } from '../app/device';
+import { search, whereOf, type SearchHit } from '../library/search';
 import { buildLibrary, sortSheets, type SortOrder } from '../library/tree';
 import type { Engine } from '../sync/engine';
 import { parseNotes } from '../notes/notes';
+import { PROMPTS_PATH, markUsed, mergeBatches, newPromptFile, pickPrompt, promptComment, unusedPrompts, usedCount } from '../prompts/prompts';
+import { PROMPT_BATCHES } from '../prompts/starter';
 import { TRASH, isWithin, keyOf, notesPathFor, parentOf } from '../sync/paths';
 import { EditorPane } from './EditorPane';
-import { INBOX, LibraryPane, TRASH_VIEW } from './LibraryPane';
+import { ALL_VIEW, INBOX, LibraryPane, PROMPTS_VIEW, RECENT_VIEW, SEARCH_VIEW, SPECIAL_VIEWS, TRASH_VIEW } from './LibraryPane';
 import { NotesPanel } from './NotesPanel';
+import { PromptsPane } from './PromptsPane';
+import { SearchPane } from './SearchPane';
+import { WhatsNew } from './WhatsNew';
 import { ResizeHandle } from './ResizeHandle';
 import { NameDialog, type MenuItem, type NameRequest } from './Overlays';
 import { SettingsDialog } from './SettingsDialog';
@@ -31,6 +38,8 @@ type NotesTarget = { kind: 'sheet' } | { kind: 'group'; key: string } | null;
 const SYNC_AFTER_CHANGE_MS = 2000;
 const SYNC_RETRY_MS = 15_000;
 const SYNC_EVERY_MS = 60_000;
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const PROMPTS_KEY = keyOf(PROMPTS_PATH);
 
 function useLayout(): Layout {
   const measure = (): Layout => (window.innerWidth >= 1100 ? 'wide' : window.innerWidth >= 700 ? 'medium' : 'narrow');
@@ -104,13 +113,47 @@ export function Workspace({ engine, onDisconnect }: Props) {
   const [nameRequest, setNameRequest] = useState<NameRequest | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [notesTarget, setNotesTarget] = useState<NotesTarget>(null);
+  const [typewriterOn, setTypewriterOn] = usePref('typewriter', false);
+  /** The last real group you were in; sheets started from Prompts go there. */
+  const [lastGroup, setLastGroup] = usePref<string>('lastGroup', INBOX);
+  const [query, setQuery] = useState('');
+  // Updates this device hasn't seen yet pop up once; Settings shows them all.
+  const [whatsNew, setWhatsNew] = useState<{ all: boolean } | null>(() => (unseenUpdates().length ? { all: false } : null));
   const collapsed = useMemo(() => new Set(collapsedList), [collapsedList]);
 
-  const group = groupKey === TRASH_VIEW ? null : (library.groups.get(groupKey) ?? library.root);
+  const special = SPECIAL_VIEWS.includes(groupKey);
+  const group = special ? null : (library.groups.get(groupKey) ?? library.root);
   const inTrash = groupKey === TRASH_VIEW;
   const sheet = sheetKey ? engine.get(sheetKey) : undefined;
   const currentKey = sheet?.kind === 'file' ? sheet.key : null;
   const readOnly = sheet ? isWithin(sheet.path, TRASH) : false;
+  const isPromptList = currentKey === PROMPTS_KEY;
+
+  // ---- Prompts ----
+  const promptFile = engine.get(PROMPTS_KEY)?.text;
+  /** The prompt list, created or topped up with any new batches of Quill's prompts. */
+  const promptList = (): string | null => {
+    const current = engine.get(PROMPTS_KEY)?.text;
+    if (current !== undefined) {
+      const merged = mergeBatches(current, PROMPT_BATCHES);
+      if (merged !== current) engine.writeFile(PROMPTS_PATH, merged);
+      return merged;
+    }
+    // Only after hearing from Dropbox, so another device's list isn't overwritten.
+    if (!engine.status.lastSynced) return null;
+    const fresh = newPromptFile(PROMPT_BATCHES);
+    engine.writeFile(PROMPTS_PATH, fresh);
+    return fresh;
+  };
+  /** A prompt, already ticked off. null: not ready; "": none left. */
+  const takePrompt = (): string | null => {
+    const file = promptList();
+    if (file === null) return null;
+    const prompt = pickPrompt(file);
+    if (!prompt) return '';
+    engine.writeFile(PROMPTS_PATH, markUsed(file, prompt, new Date()));
+    return prompt.text;
+  };
 
   // ---- Notes ----
   const notesGroup = notesTarget?.kind === 'group' ? library.groups.get(notesTarget.key) : undefined;
@@ -126,7 +169,7 @@ export function Workspace({ engine, onDisconnect }: Props) {
 
   // A group that no longer exists (deleted on another device): fall back to Inbox.
   useEffect(() => {
-    if (groupKey !== TRASH_VIEW && groupKey !== INBOX && !library.groups.has(groupKey)) setGroupKey(INBOX);
+    if (!special && groupKey !== INBOX && !library.groups.has(groupKey)) setGroupKey(INBOX);
   }, [groupKey, library, setGroupKey]);
 
   // ---- Syncing ----
@@ -174,6 +217,44 @@ export function Workspace({ engine, onDisconnect }: Props) {
     setGroupKey(key);
     setPane('sheets');
     setLibraryOpen(false);
+    if (!SPECIAL_VIEWS.includes(key)) setLastGroup(key);
+    // Prompts opens your list beside it (on iPhone, from its own button).
+    if (key === PROMPTS_VIEW && layout !== 'narrow' && promptList() !== null) openPromptList();
+  };
+
+  const openPromptList = () => {
+    if (promptList() === null) return;
+    if (currentKey !== PROMPTS_KEY) leaveSheet();
+    setSheetKey(PROMPTS_KEY);
+    setPane('editor');
+  };
+
+  /** A new sheet in `folder` that starts with the prompt as a comment. */
+  const startPrompted = (folder: string, prompt: string) => {
+    const created = engine.createSheet(folder);
+    engine.setText(created.key, promptComment(prompt));
+    openSheet(created.key);
+    setTimeout(() => {
+      const content = document.querySelector<HTMLElement>('.cm-content');
+      content?.focus();
+    }, 50);
+  };
+
+  const promptInGroup = () => {
+    if (!group) return;
+    const prompt = takePrompt();
+    if (prompt === null) alert('Quill needs to reach Dropbox once before it can make your prompt list. Try again in a moment.');
+    else if (prompt === '') alert('You’ve used every prompt on your list. Add more to it under Prompts, or ask for another batch.');
+    else startPrompted(group.path, prompt);
+  };
+
+  const openHit = (hit: SearchHit) => {
+    if (hit.kind === 'groupNotes') {
+      setNotesTarget({ kind: 'group', key: hit.key });
+      return;
+    }
+    openSheet(hit.key);
+    setNotesTarget(hit.kind === 'sheetNotes' ? { kind: 'sheet' } : notesTarget?.kind === 'sheet' ? notesTarget : null);
   };
 
   const backToSheets = () => {
@@ -210,6 +291,13 @@ export function Workspace({ engine, onDisconnect }: Props) {
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'f') {
         e.preventDefault();
         setPanes(focusMode ? 'all' : 'editor');
+      } else if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'f') {
+        // ⌘F: search everything.
+        e.preventDefault();
+        setGroupKey(SEARCH_VIEW);
+        setPane('sheets');
+        if (focusMode) setPanes('all');
+        setTimeout(() => document.querySelector<HTMLInputElement>('.search-input')?.select(), 0);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -249,9 +337,12 @@ export function Workspace({ engine, onDisconnect }: Props) {
         ]
       : undefined;
 
+  const typewriterItem: MenuItem[] = layout === 'narrow' ? [] : [{ label: 'Typewriter mode', checked: typewriterOn, onSelect: () => setTypewriterOn(!typewriterOn) }];
   const sheetMenu: MenuItem[] = !sheet
     ? []
-    : readOnly
+    : isPromptList
+      ? [{ label: 'Word count', checked: showWords, onSelect: () => setShowWords(!showWords) }, ...typewriterItem]
+      : readOnly
       ? [
           { label: 'Put back', icon: 'restore', onSelect: () => setSheetKey(engine.restore(sheet.key)) },
           { label: 'Word count', checked: showWords, onSelect: () => setShowWords(!showWords) },
@@ -272,6 +363,7 @@ export function Workspace({ engine, onDisconnect }: Props) {
           },
           { label: 'Word count', checked: showWords, onSelect: () => setShowWords(!showWords) },
           ...(layout === 'narrow' ? [] : [{ label: 'Focus mode', checked: focusMode, onSelect: () => setFocusMode(!focusMode) }]),
+          ...typewriterItem,
           'divider',
           {
             label: 'Move to Trash',
@@ -324,8 +416,15 @@ export function Workspace({ engine, onDisconnect }: Props) {
   }
 
   // ---- Panes ----
-  const listTitle = inTrash ? 'Trash' : group === library.root ? 'Inbox' : (group?.name ?? '');
-  const listSheets = inTrash ? sortSheets(library.trash, sort) : sortSheets(group?.sheets ?? [], sort);
+  const allSheets = [...library.sheets.values()];
+  const recent = allSheets.filter((s) => s.modified > Date.now() - WEEK_MS);
+  const TITLES: Record<string, string> = { [TRASH_VIEW]: 'Trash', [ALL_VIEW]: 'All', [RECENT_VIEW]: 'Last 7 Days' };
+  const listTitle = TITLES[groupKey] ?? (group === library.root ? 'Inbox' : (group?.name ?? ''));
+  const listSheets = sortSheets(inTrash ? library.trash : groupKey === ALL_VIEW ? allSheets : groupKey === RECENT_VIEW ? recent : (group?.sheets ?? []), sort);
+  const acrossGroups = groupKey === ALL_VIEW || groupKey === RECENT_VIEW;
+  const texts = useMemo(() => new Map(engine.all().map((f) => [f.key, f.text ?? ''])), [engine, revision]);
+  const hits = useMemo(() => (groupKey === SEARCH_VIEW ? search(library, texts, query) : []), [groupKey, library, texts, query]);
+  const promptDestination = library.groups.get(lastGroup) ?? library.root;
 
   const libraryPane = (
     <LibraryPane
@@ -333,6 +432,8 @@ export function Workspace({ engine, onDisconnect }: Props) {
       selected={groupKey}
       collapsed={collapsed}
       status={engine.status}
+      recentCount={recent.length}
+      promptsLeft={promptFile === undefined ? null : unusedPrompts(promptFile).length}
       onSelect={selectGroup}
       onToggle={toggleCollapsed}
       onNewGroup={() => newGroup('')}
@@ -340,7 +441,23 @@ export function Workspace({ engine, onDisconnect }: Props) {
     />
   );
 
-  const sheetList = (
+  const backToLibrary = layout === 'wide' ? undefined : layout === 'narrow' ? () => setPane('library') : () => setLibraryOpen(true);
+  const middle =
+    groupKey === PROMPTS_VIEW ? (
+      <PromptsPane
+        unused={promptFile === undefined ? PROMPT_BATCHES.flat().length : unusedPrompts(promptFile).length}
+        used={promptFile === undefined ? 0 : usedCount(promptFile)}
+        destination={promptDestination === library.root ? 'Inbox' : promptDestination.name}
+        onTake={takePrompt}
+        onStart={(prompt) => startPrompted(promptDestination.path, prompt)}
+        onOpenList={openPromptList}
+        onBack={backToLibrary}
+      />
+    ) : groupKey === SEARCH_VIEW ? (
+      <SearchPane query={query} hits={hits} onQuery={setQuery} onOpen={openHit} onBack={backToLibrary} />
+    ) : null;
+
+  const sheetList = middle ?? (
     <SheetList
       title={listTitle}
       sheets={listSheets}
@@ -348,8 +465,10 @@ export function Workspace({ engine, onDisconnect }: Props) {
       sort={sort}
       onSort={setSort}
       onOpen={openSheet}
-      onBack={layout === 'wide' ? undefined : layout === 'narrow' ? () => setPane('library') : () => setLibraryOpen(true)}
-      onNew={inTrash ? undefined : newSheet}
+      onBack={backToLibrary}
+      onNew={group ? newSheet : undefined}
+      onPrompt={group ? promptInGroup : undefined}
+      whereOf={acrossGroups ? (path) => whereOf(library, parentOf(path)) : undefined}
       menu={groupMenu}
       unsynced={unsynced}
       trash={
@@ -375,13 +494,14 @@ export function Workspace({ engine, onDisconnect }: Props) {
       touch={touch}
       focusMode={focusMode && layout !== 'narrow'}
       showWords={showWords}
+      typewriterMode={typewriterOn && layout !== 'narrow'}
       menu={sheetMenu}
       banner={banner}
       onChange={onChange}
       onBack={layout === 'narrow' ? backToSheets : undefined}
       onToggleFocus={layout === 'narrow' ? undefined : cyclePanes}
       onToggleWords={() => setShowWords(!showWords)}
-      notesCount={sheetNotesCount}
+      notesCount={isPromptList ? -1 : sheetNotesCount}
       notesOpen={notesTarget?.kind === 'sheet'}
       onToggleNotes={toggleSheetNotes}
     />
@@ -472,7 +592,26 @@ export function Workspace({ engine, onDisconnect }: Props) {
         </>
       )}
       {nameRequest && <NameDialog request={nameRequest} onClose={() => setNameRequest(null)} />}
-      {settingsOpen && <SettingsDialog engine={engine} onDisconnect={onDisconnect} onClose={() => setSettingsOpen(false)} />}
+      {settingsOpen && (
+        <SettingsDialog
+          engine={engine}
+          onDisconnect={onDisconnect}
+          onWhatsNew={() => {
+            setSettingsOpen(false);
+            setWhatsNew({ all: true });
+          }}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
+      {whatsNew && (
+        <WhatsNew
+          updates={whatsNew.all ? updates : unseenUpdates()}
+          onClose={() => {
+            markUpdatesSeen();
+            setWhatsNew(null);
+          }}
+        />
+      )}
     </div>
   );
 }

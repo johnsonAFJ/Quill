@@ -34,6 +34,8 @@ const BLANKING_MIN_LENGTH = 200;
 const BLANKING_RATIO = 0.1;
 
 const isMarkdown = (path: string) => /\.md$/i.test(path);
+/** Quill's name for a sheet that hasn't been named yet, on any device. */
+const UNTITLED = /^Untitled \d{4}-\d{2}-\d{2} \d{4}( \d+)?$/;
 const newId = () => crypto.randomUUID();
 
 export class Engine {
@@ -181,11 +183,19 @@ export class Engine {
 
   /**
    * Called when you leave a sheet. An "Untitled …" sheet is named once from its
-   * first line; an empty one is cleaned up. Returns the sheet's key afterwards.
+   * first line, whichever device you're on; an empty new one is cleaned up.
+   * Returns the sheet's key afterwards.
    */
   finishEditing(key: string): string | null {
     const file = this.files.get(key);
-    if (!file || !file.provisional) return key;
+    if (!file || file.kind !== 'file') return key;
+    const untitled = UNTITLED.test(stem(baseName(file.path)));
+    if (!file.provisional && !untitled) return key;
+    if (!file.provisional) {
+      // Made on another device: name it, but never throw it away here.
+      const name = safeFileName(titleOf(file.text ?? ''));
+      return name ? (this.rename(key, name) ?? key) : key;
+    }
     if (!file.text?.trim()) {
       this.trash(key);
       return null;

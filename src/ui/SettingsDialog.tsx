@@ -6,9 +6,9 @@ import type { Engine } from '../sync/engine';
 import { SyncLine } from './LibraryPane';
 import { Dialog } from './Overlays';
 
-type Props = { engine: Engine; onDisconnect: () => void; onClose: () => void };
+type Props = { engine: Engine; onDisconnect: () => void; onWhatsNew: () => void; onClose: () => void };
 
-export function SettingsDialog({ engine, onDisconnect, onClose }: Props) {
+export function SettingsDialog({ engine, onDisconnect, onWhatsNew, onClose }: Props) {
   const [account, setAccount] = useState('…');
   const [theme, setTheme] = useState<Theme>(prefs.get('theme', 'auto'));
   const [, rerender] = useState(0);
@@ -56,6 +56,13 @@ export function SettingsDialog({ engine, onDisconnect, onClose }: Props) {
         <p className="muted">Every sheet and note on this device, in the same folders as in Dropbox.</p>
         <button className="quiet" onClick={() => downloadEverything(engine.all())}>
           Download everything as .zip
+        </button>
+      </section>
+
+      <section className="settings-section">
+        <h3>Updates</h3>
+        <button className="quiet" onClick={onWhatsNew}>
+          What’s new
         </button>
       </section>
 

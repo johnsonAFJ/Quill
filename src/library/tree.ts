@@ -44,6 +44,8 @@ export type Library = {
 
 export const TRASH_FOLDER = '_Trash';
 const GROUP_NOTES = '_notes.md';
+/** The prompt list (see src/prompts). It opens from "Prompts" in the Library, not as a sheet. */
+const PROMPT_LIST = '_prompts.md';
 const SHEET_NOTES_SUFFIX = '.notes.md';
 
 type Role = 'group' | 'trash' | 'hidden' | 'sheet' | 'sheetNotes' | 'groupNotes' | 'other';
@@ -56,6 +58,7 @@ export function roleOf(name: string, kind: Entry['kind']): Role {
     return name.startsWith('_') ? 'hidden' : 'group';
   }
   if (lower === GROUP_NOTES) return 'groupNotes';
+  if (lower === PROMPT_LIST) return 'other';
   if (lower.endsWith(SHEET_NOTES_SUFFIX)) return 'sheetNotes';
   if (lower.endsWith('.md')) return 'sheet';
   return 'other';

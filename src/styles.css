@@ -818,3 +818,108 @@ button.danger {
 .note-body::placeholder {
   color: var(--muted);
 }
+
+/* ---- Prompts, search and what's new ---- */
+
+.prompt-card {
+  margin: 0.5rem 0.5rem 1rem;
+  padding: 1rem 1.1rem;
+  background: var(--bg);
+  border-radius: 12px;
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.prompt-card p {
+  margin: 0 0 1rem;
+  font: 1.1rem/1.55 var(--writing-font);
+}
+
+.prompt-card.empty {
+  display: flex;
+  justify-content: center;
+  padding: 1.5rem 1rem;
+}
+
+.prompt-card.empty button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.prompt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.list-button {
+  margin: 0 1rem;
+}
+
+.search-input {
+  width: 100%;
+  margin-top: 0.7rem;
+  font: inherit;
+  font-size: 16px;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+}
+
+.search-input:focus {
+  border-color: var(--accent);
+}
+
+.sheet-pane .pane-header .sort-label {
+  margin-top: 0.35rem;
+}
+
+.card-where {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 0.1rem;
+}
+
+.badge.quiet-badge {
+  margin-top: 0;
+  color: var(--muted);
+}
+
+.card-preview mark {
+  background: var(--selection);
+  color: var(--text);
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+.whats-new {
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+.whats-new section + section {
+  border-top: 1px solid var(--line);
+  margin-top: 0.8rem;
+  padding-top: 0.2rem;
+}
+
+.whats-new h3 {
+  font-size: 0.95rem;
+  margin: 0.6rem 0 0.3rem;
+}
+
+.whats-new ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.whats-new li {
+  margin: 0.3rem 0;
+  font-size: 0.93rem;
+}

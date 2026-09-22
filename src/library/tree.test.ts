@@ -11,6 +11,7 @@ describe('roleOf', () => {
     expect(roleOf('On Walking.notes.md', 'file')).toBe('sheetNotes');
     expect(roleOf('_Notes.md', 'file')).toBe('groupNotes');
     expect(roleOf('photo.jpg', 'file')).toBe('other');
+    expect(roleOf('_Prompts.md', 'file')).toBe('other');
     expect(roleOf('Essays', 'folder')).toBe('group');
     expect(roleOf('_Trash', 'folder')).toBe('trash');
     expect(roleOf('_quill', 'folder')).toBe('hidden');

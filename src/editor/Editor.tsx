@@ -1,11 +1,13 @@
 import { useEffect, useRef, type RefObject } from 'react';
 import { EditorView } from '@codemirror/view';
 import { External, createEditorState } from './setup';
+import { typewriter, typewriterSlot } from './typewriter';
 
 type Props = {
   sheetKey: string;
   text: string;
   readOnly: boolean;
+  typewriterMode: boolean;
   onChange: (text: string) => void;
   onFocusChange: (focused: boolean) => void;
   /** The selected text, or "" when nothing is selected. */
@@ -13,7 +15,7 @@ type Props = {
   viewRef: RefObject<EditorView | null>;
 };
 
-export function Editor({ sheetKey, text, readOnly, onChange, onFocusChange, onSelectionChange, viewRef }: Props) {
+export function Editor({ sheetKey, text, readOnly, typewriterMode, onChange, onFocusChange, onSelectionChange, viewRef }: Props) {
   const parent = useRef<HTMLDivElement>(null);
   // Latest callbacks, so the editor doesn't need rebuilding when they change.
   const callbacks = useRef({ onChange, onFocusChange, onSelectionChange });
@@ -33,6 +35,7 @@ export function Editor({ sheetKey, text, readOnly, onChange, onFocusChange, onSe
           callbacks.current.onSelectionChange(update.state.sliceDoc(from, to));
         }
       }),
+      typewriterMode,
     );
 
   useEffect(() => {
@@ -49,6 +52,10 @@ export function Editor({ sheetKey, text, readOnly, onChange, onFocusChange, onSe
   useEffect(() => {
     viewRef.current?.setState(makeState(text));
   }, [sheetKey, readOnly]);
+
+  useEffect(() => {
+    viewRef.current?.dispatch({ effects: typewriterSlot.reconfigure(typewriterMode ? typewriter : []) });
+  }, [typewriterMode, viewRef]);
 
   // The text changed from outside (a sync brought a newer version): show it.
   useEffect(() => {

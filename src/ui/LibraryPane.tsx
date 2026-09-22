@@ -1,28 +1,40 @@
 import type { Group, Library } from '../library/tree';
 import type { SyncStatus } from '../sync/engine';
-import { Icon } from './icons';
+import { Icon, type IconName } from './icons';
 
 export const INBOX = '';
 export const TRASH_VIEW = '__trash';
+export const ALL_VIEW = '__all';
+export const RECENT_VIEW = '__recent';
+export const PROMPTS_VIEW = '__prompts';
+export const SEARCH_VIEW = '__search';
+/** Library rows that aren't a group (folder) of their own. */
+export const SPECIAL_VIEWS = [TRASH_VIEW, ALL_VIEW, RECENT_VIEW, PROMPTS_VIEW, SEARCH_VIEW];
 
 type Props = {
   library: Library;
   selected: string;
   collapsed: Set<string>;
   status: SyncStatus;
+  recentCount: number;
+  /** Prompts left on your list, or null before the list exists. */
+  promptsLeft: number | null;
   onSelect: (groupKey: string) => void;
   onToggle: (groupKey: string) => void;
   onNewGroup: () => void;
   onSettings: () => void;
 };
 
-export function LibraryPane({ library, selected, collapsed, status, onSelect, onToggle, onNewGroup, onSettings }: Props) {
+export function LibraryPane({ library, selected, collapsed, status, recentCount, promptsLeft, onSelect, onToggle, onNewGroup, onSettings }: Props) {
   const trashCount = library.trash.length + library.trashGroups.length;
   return (
     <nav className="pane library-pane" aria-label="Library">
       <header className="pane-header">
         <div className="pane-tools">
           <span />
+          <button className={`icon-button${selected === SEARCH_VIEW ? ' on' : ''}`} aria-label="Search" title="Search (⌘F)" onClick={() => onSelect(SEARCH_VIEW)}>
+            <Icon name="search" />
+          </button>
           <button className="icon-button" aria-label="New group" onClick={onNewGroup}>
             <Icon name="plus" />
           </button>
@@ -35,6 +47,9 @@ export function LibraryPane({ library, selected, collapsed, status, onSelect, on
 
       <div className="pane-body">
         <Row icon="inbox" label="Inbox" count={library.root.sheets.length} active={selected === INBOX} onClick={() => onSelect(INBOX)} />
+        <Row icon="stack" label="All" count={library.sheets.size} active={selected === ALL_VIEW} onClick={() => onSelect(ALL_VIEW)} />
+        <Row icon="clock" label="Last 7 Days" count={recentCount} active={selected === RECENT_VIEW} onClick={() => onSelect(RECENT_VIEW)} />
+        <Row icon="sparkle" label="Prompts" count={promptsLeft ?? 0} active={selected === PROMPTS_VIEW} onClick={() => onSelect(PROMPTS_VIEW)} />
         {library.root.groups.length > 0 && <div className="section-label">Groups</div>}
         {sortGroups(library.root.groups).map((g) => (
           <GroupRow key={g.key} group={g} depth={0} selected={selected} collapsed={collapsed} onSelect={onSelect} onToggle={onToggle} />
@@ -59,7 +74,7 @@ function sortGroups(groups: Group[]): Group[] {
   return [...groups].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
 }
 
-function Row({ icon, label, count, active, onClick }: { icon: 'inbox' | 'trash'; label: string; count: number; active: boolean; onClick: () => void }) {
+function Row({ icon, label, count, active, onClick }: { icon: IconName; label: string; count: number; active: boolean; onClick: () => void }) {
   return (
     <button className={`library-row${active ? ' active' : ''}`} onClick={onClick}>
       <span className="row-lead" />

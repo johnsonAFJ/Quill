@@ -12,13 +12,17 @@ type Props = {
   onBack?: () => void;
   /** Absent in Trash, where nothing new is made. */
   onNew?: () => void;
+  /** A new sheet that starts with a writing prompt. */
+  onPrompt?: () => void;
+  /** In All and Last 7 Days: which group each sheet is in. */
+  whereOf?: (path: string) => string;
   menu?: MenuItem[];
   trash?: { groups: TrashedGroup[]; onRestore: (key: string) => void };
   /** Keys of sheets with changes that haven't reached Dropbox. */
   unsynced: Set<string>;
 };
 
-export function SheetList({ title, sheets, selectedKey, sort, onSort, onOpen, onBack, onNew, menu, trash, unsynced }: Props) {
+export function SheetList({ title, sheets, selectedKey, sort, onSort, onOpen, onBack, onNew, onPrompt, whereOf, menu, trash, unsynced }: Props) {
   const empty = sheets.length === 0 && (trash?.groups.length ?? 0) === 0;
   return (
     <section className="pane sheet-pane" aria-label={title}>
@@ -39,6 +43,11 @@ export function SheetList({ title, sheets, selectedKey, sort, onSort, onOpen, on
           >
             <Icon name="sort" />
           </button>
+          {onPrompt && (
+            <button className="icon-button" aria-label="New sheet from a prompt" title="New sheet from a prompt" onClick={onPrompt}>
+              <Icon name="sparkle" />
+            </button>
+          )}
           {onNew && (
             <button className="icon-button" aria-label="New sheet" onClick={onNew}>
               <Icon name="plus" />
@@ -72,6 +81,7 @@ export function SheetList({ title, sheets, selectedKey, sort, onSort, onOpen, on
                 {unsynced.has(s.key) && <span className="dot" aria-label="Not synced yet" />}
                 {s.title || 'New sheet'}
               </div>
+              {whereOf && <div className="card-where">{whereOf(s.path)}</div>}
               {s.preview && <div className="card-preview">{s.preview}</div>}
               {s.hasNotes && (
                 <span className="card-clip" aria-label="Has notes">
