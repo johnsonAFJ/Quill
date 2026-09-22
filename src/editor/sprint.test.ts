@@ -37,6 +37,11 @@ describe('sprint mode', () => {
     expect(tryEdit(DOC, end, 4, 8, 'sea', 'input.type')).toBe(DOC);
   });
 
+  it('won’t let find and replace change earlier text', () => {
+    expect(tryEdit(DOC, end, 4, 8, 'sea', 'input.replace')).toBe(DOC);
+    expect(tryEdit(DOC, end, end - 3, end, 'how', 'input.replace')).toBe('The tide went out. It kept going! Nobody knew how');
+  });
+
   it('always lets you keep typing', () => {
     expect(tryEdit(DOC, end, end, end, '.', 'input.type')).toBe(DOC + '.');
   });

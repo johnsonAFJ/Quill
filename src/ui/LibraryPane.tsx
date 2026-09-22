@@ -32,7 +32,7 @@ export function LibraryPane({ library, selected, collapsed, status, recentCount,
       <header className="pane-header">
         <div className="pane-tools">
           <span />
-          <button className={`icon-button${selected === SEARCH_VIEW ? ' on' : ''}`} aria-label="Search" title="Search (⌘F)" onClick={() => onSelect(SEARCH_VIEW)}>
+          <button className={`icon-button${selected === SEARCH_VIEW ? ' on' : ''}`} aria-label="Search" title="Search everything (⌥⌘F)" onClick={() => onSelect(SEARCH_VIEW)}>
             <Icon name="search" />
           </button>
           <button className="icon-button" aria-label="New group" onClick={onNewGroup}>

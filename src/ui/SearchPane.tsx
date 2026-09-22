@@ -8,11 +8,13 @@ type Props = {
   onQuery: (query: string) => void;
   onOpen: (hit: SearchHit) => void;
   onBack?: () => void;
+  /** Esc: back to where you were. */
+  onClose: () => void;
 };
 
 const LABEL = { sheet: '', sheetNotes: 'In notes', groupNotes: 'Group notes' } as const;
 
-export function SearchPane({ query, hits, onQuery, onOpen, onBack }: Props) {
+export function SearchPane({ query, hits, onQuery, onOpen, onBack, onClose }: Props) {
   const input = useRef<HTMLInputElement>(null);
   useEffect(() => input.current?.focus(), []);
 
@@ -39,6 +41,12 @@ export function SearchPane({ query, hits, onQuery, onOpen, onBack }: Props) {
           autoCorrect="off"
           spellCheck={false}
           onChange={(e) => onQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.preventDefault();
+              onClose();
+            }
+          }}
         />
         {query.trim() && (
           <div className="sort-label">

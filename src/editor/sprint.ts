@@ -33,7 +33,7 @@ export const sprintLock = StateField.define<number>({
 });
 
 /** Your own typing, deleting, cutting and undoing; formatting buttons only add marks. */
-const WRITING = ['input.type', 'input.paste', 'input.drop', 'input.complete', 'delete', 'undo', 'redo', 'move'];
+const WRITING = ['input.type', 'input.paste', 'input.drop', 'input.complete', 'input.replace', 'delete', 'undo', 'redo', 'move'];
 
 /** Rejects edits to locked text, and keeps the cursor out of it. */
 const forwardOnly = EditorState.transactionFilter.of((tr: Transaction) => {

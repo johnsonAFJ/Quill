@@ -16,6 +16,7 @@ const GROUPS: { title: string; keys: [string, string][] }[] = [
   {
     title: 'Writing',
     keys: [
+      ['⌘F', 'Find and replace in this sheet (Enter for the next one, Esc to close)'],
       ['⌘L', 'Select the paragraph (again for the next)'],
       ['⌘Z  ⌘⇧Z', 'Undo, redo'],
       ['⌘⇧F', 'Just the text (hide the sidebars)'],
@@ -28,7 +29,7 @@ const GROUPS: { title: string; keys: [string, string][] }[] = [
     keys: [
       ['⌘⇧J', 'Quick note, added to “Quick Notes” in the Inbox'],
       ['⌥⌘N', 'New sheet in the Inbox'],
-      ['⌘F', 'Search'],
+      ['⌥⌘F', 'Search everything (again, or Esc, to go back)'],
     ],
   },
 ];

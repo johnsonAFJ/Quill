@@ -2,6 +2,11 @@
 
 Newest first. Each "##" heading is one update. Quill shows the updates you haven't seen yet, once per device, the first time you open it after an update.
 
+## Sep 22 · Find and replace
+- **Find and replace in a sheet (⌘F,** or ••• → Find and replace): every match is highlighted, with a "2 of 5" count. Enter jumps to the next one (⇧Enter the one before), Tab moves to "Replace with", and **All** replaces every match. **Aa** matches capitals exactly. Esc closes it. In a sprint it can't change locked text.
+- **Search everything moved to ⌥⌘F.** Press it again, or Esc, to go back to the sheets you were looking at. The search button in the Library works the same way.
+- Fixed: deleting the sheet you had open in focus mode left an empty screen with no way back. When no sheet is open, the sidebars now always come back.
+
 ## Sep 22 · Sprints really lock, fold any heading
 - **Sprint mode now locks earlier sentences:** you can't click or arrow back into them anymore; the cursor stays where you're writing. Backspace still works within the sentence you're typing.
 - **Fold arrows on `#` headings too,** not just `##` and smaller. The sheet's title (its first line) doesn't get one.

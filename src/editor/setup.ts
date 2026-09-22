@@ -8,6 +8,7 @@ import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, keymap, placeholder } from '@codemirror/view';
 import { tags as t } from '@lezer/highlight';
 import { bold, bulletList, insertLink, italic, quote, toggleComment, toggleHeading } from './formatting';
+import { findAndReplace } from './find';
 import { sectionFolding } from './folding';
 import { sprintSlot } from './sprint';
 import { typewriter, typewriterSlot } from './typewriter';
@@ -73,6 +74,7 @@ export function createEditorState(text: string, readOnly: boolean, listeners: Ex
       keymap.of([...historyKeymap, ...defaultKeymap]),
       markdown(),
       sectionFolding,
+      findAndReplace,
       syntaxHighlighting(markdownStyle),
       EditorView.lineWrapping,
       EditorView.contentAttributes.of({ spellcheck: 'true', autocorrect: 'on', autocapitalize: 'sentences' }),

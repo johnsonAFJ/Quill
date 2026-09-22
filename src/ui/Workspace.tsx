@@ -4,6 +4,8 @@
 //   iPhone: one screen at a time.
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode, type TouchEvent } from 'react';
+import { openSearchPanel } from '@codemirror/search';
+import { EditorView } from '@codemirror/view';
 import { markUpdatesSeen, unseenUpdates, updates } from '../app/changelog';
 import { isTouch, prefs } from '../app/device';
 import { search, whereOf, type SearchHit } from '../library/search';
@@ -108,9 +110,8 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
     setPaneState(p);
     if (layout === 'narrow') prefs.set('phonePane', p);
   };
-  const [panes, setPanes] = usePref<Panes>('panes', 'all');
+  const [savedPanes, setPanes] = usePref<Panes>('panes', 'all');
   const [widths, setWidths] = usePref<Record<Column, number>>('widths', { library: WIDTHS.library[0], list: WIDTHS.list[0], notes: WIDTHS.notes[0] });
-  const focusMode = panes === 'editor';
   const setFocusMode = (on: boolean) => setPanes(on ? 'editor' : 'all');
   /** All columns → without the Library → just the editor → all again (iPad portrait has no Library column to hide). */
   const cyclePanes = () => setPanes(panes === 'editor' ? 'all' : panes === 'all' && layout === 'wide' ? 'noLibrary' : 'editor');
@@ -142,6 +143,9 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
   const sheet = sheetKey ? engine.get(sheetKey) : undefined;
   const currentKey = sheet?.kind === 'file' ? sheet.key : null;
   const readOnly = sheet ? isWithin(sheet.path, TRASH) : false;
+  // With no sheet open there's no toolbar to bring the sidebars back, so they always show.
+  const panes: Panes = currentKey ? savedPanes : 'all';
+  const focusMode = panes === 'editor';
   const isPromptList = currentKey === PROMPTS_KEY;
 
   // ---- Prompts ----
@@ -279,6 +283,26 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
     if (key === PROMPTS_VIEW && layout !== 'narrow' && promptList() !== null) openPromptList();
   };
 
+  /** ⌥⌘F or the search button: open Search, or go back to where you were. */
+  const beforeSearch = useRef<string>(INBOX);
+  const toggleSearch = () => {
+    if (groupKey === SEARCH_VIEW) {
+      selectGroup(beforeSearch.current);
+      return;
+    }
+    beforeSearch.current = groupKey;
+    selectGroup(SEARCH_VIEW);
+    if (focusMode) setPanes('all');
+    setTimeout(() => document.querySelector<HTMLInputElement>('.search-input')?.select(), 0);
+  };
+
+  /** ⌘F: the find and replace bar in the open sheet. */
+  const findInSheet = () => {
+    const dom = document.querySelector<HTMLElement>('.cm-editor');
+    const view = dom && EditorView.findFromDOM(dom);
+    if (view) openSearchPanel(view);
+  };
+
   const openPromptList = () => {
     if (promptList() === null) return;
     if (currentKey !== PROMPTS_KEY) leaveSheet();
@@ -372,6 +396,12 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
     },
     [engine],
   );
+  // Closing or deleting the open sheet leaves focus mode.
+  const hadSheet = useRef(Boolean(currentKey));
+  useEffect(() => {
+    if (hadSheet.current && !currentKey && savedPanes !== 'all') setPanes('all');
+    hadSheet.current = Boolean(currentKey);
+  }, [currentKey, savedPanes, setPanes]);
   // Leaving the sheet ends its sprint.
   useEffect(() => {
     if (sprint && sprint.key !== currentKey) endSprint(false);
@@ -390,12 +420,14 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
 
   // The shortcut handler below is set up once; this keeps it using the latest versions.
   const toggleSprint = () => (activeSprint ? endSprint(false) : currentKey && !readOnly && setSprintChoosing(true));
-  const shortcuts = useRef({ newInboxSheet, toggleSprint, sprinting: Boolean(activeSprint) });
-  shortcuts.current = { newInboxSheet, toggleSprint, sprinting: Boolean(activeSprint) };
+  const shortcuts = useRef({ newInboxSheet, toggleSprint, toggleSearch, findInSheet, sprinting: Boolean(activeSprint) });
+  shortcuts.current = { newInboxSheet, toggleSprint, toggleSearch, findInSheet, sprinting: Boolean(activeSprint) };
 
   // ⌘⇧F focus mode, ⌘F search, ⌘⇧J quick note, ⌥⌘N new Inbox sheet.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Already handled by the editor (like ⌘F or Esc in the find bar).
+      if (e.defaultPrevented) return;
       const mod = e.metaKey || e.ctrlKey;
       if (e.key === 'Escape' && shortcuts.current.sprinting && !document.querySelector('.dialog')) {
         endSprint(false);
@@ -410,19 +442,20 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
         shortcuts.current.newInboxSheet();
       } else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'f') {
         e.preventDefault();
-        setPanes(focusMode ? 'all' : 'editor');
-      } else if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'f') {
-        // ⌘F: search everything.
+        if (currentKey || focusMode) setPanes(focusMode ? 'all' : 'editor');
+      } else if (mod && e.altKey && e.code === 'KeyF') {
         e.preventDefault();
-        setGroupKey(SEARCH_VIEW);
-        setPane('sheets');
-        if (focusMode) setPanes('all');
-        setTimeout(() => document.querySelector<HTMLInputElement>('.search-input')?.select(), 0);
+        shortcuts.current.toggleSearch();
+      } else if (mod && !e.shiftKey && e.key.toLowerCase() === 'f') {
+        // ⌘F outside the writing: find in the open sheet, or search everything if none is open.
+        e.preventDefault();
+        if (currentKey) shortcuts.current.findInSheet();
+        else shortcuts.current.toggleSearch();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [focusMode, setPanes, endSprint]);
+  }, [focusMode, currentKey, setPanes, endSprint]);
 
   // ---- Menus ----
   const groupMenu: MenuItem[] | undefined =
@@ -484,6 +517,7 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
               }),
           },
           { label: 'Export PDF…', onSelect: () => setExporting(true) },
+          { label: 'Find and replace', onSelect: findInSheet },
           { label: 'Earlier versions…', onSelect: () => setShowVersions(true) },
           'divider',
           { label: 'Word count', checked: showWords, onSelect: () => setShowWords(!showWords) },
@@ -568,7 +602,7 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
       status={engine.status}
       recentCount={recent.length}
       promptsLeft={promptFile === undefined ? null : unusedPrompts(promptFile).length}
-      onSelect={selectGroup}
+      onSelect={(key) => (key === SEARCH_VIEW ? toggleSearch() : selectGroup(key))}
       onToggle={toggleCollapsed}
       onNewGroup={() => newGroup('')}
       onSettings={() => setSettingsOpen(true)}
@@ -588,7 +622,7 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
         onBack={backToLibrary}
       />
     ) : groupKey === SEARCH_VIEW ? (
-      <SearchPane query={query} hits={hits} onQuery={setQuery} onOpen={openHit} onBack={backToLibrary} />
+      <SearchPane query={query} hits={hits} onQuery={setQuery} onOpen={openHit} onBack={backToLibrary} onClose={toggleSearch} />
     ) : null;
 
   const sheetList = middle ?? (
