@@ -62,11 +62,16 @@ describe('comments', () => {
     expect(run(toggleComment, '[<!-- Prompt -->] Text')).toBe('[Prompt] Text');
     expect(run(toggleComment, '<!-- Pro|mpt --> Text')).toBe('Pro|mpt Text');
   });
-  it('leaves comments alone when the cursor is outside them', () => {
-    expect(run(toggleComment, '<!-- a --> b|')).toBe('<!-- a --> b<!-- | -->');
+  it('comments out the whole paragraph when nothing is selected', () => {
+    expect(run(toggleComment, 'First.\n\nA lo|ng paragraph.\n\nLast.')).toBe('First.\n\n<!-- A lo|ng paragraph. -->\n\nLast.');
+    expect(run(toggleComment, '- A list it|em')).toBe('<!-- - A list it|em -->');
   });
-  it('starts an empty comment with the cursor inside', () => {
-    expect(run(toggleComment, 'a |b')).toBe('a <!-- | -->b');
+  it('unwraps it again with the cursor anywhere inside', () => {
+    expect(run(toggleComment, '<!-- A lo|ng paragraph. -->')).toBe('A lo|ng paragraph.');
+  });
+  it('starts an empty comment on a blank line, or beside an existing comment', () => {
+    expect(run(toggleComment, 'a\n|\nb')).toBe('a\n<!-- | -->\nb');
+    expect(run(toggleComment, '<!-- a --> b|')).toBe('<!-- a --> b<!-- | -->');
   });
 });
 

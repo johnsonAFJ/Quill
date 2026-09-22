@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { prefs } from '../app/device';
-import { addNote, parseNotes, removeNote, updateNote } from '../notes/notes';
+import { addNote, parseNotes, removeNote, togglePin, updateNote } from '../notes/notes';
 import { wordCount } from '../text/markdown';
 import { Icon } from './icons';
 
@@ -76,6 +76,9 @@ export function NotesPanel({ path, label, text, readOnly, onChange, onClose }: P
             body={note.body}
             readOnly={readOnly}
             folded={isFolded(note.title, i)}
+            pinned={note.pinned}
+            canPin={!readOnly && note.raw.startsWith('## ')}
+            onTogglePin={() => onChange(togglePin(text, i))}
             onToggleFold={() => toggle(note.title, i)}
             autoFocus={focusIndex === i}
             onAutoFocused={() => setFocusIndex(null)}
@@ -96,13 +99,16 @@ type CardProps = {
   readOnly: boolean;
   folded: boolean;
   onToggleFold: () => void;
+  pinned: boolean;
+  canPin: boolean;
+  onTogglePin: () => void;
   autoFocus: boolean;
   onAutoFocused: () => void;
   onEdit: (title: string, body: string) => void;
   onDelete: () => void;
 };
 
-function NoteCard({ title, body, readOnly, folded, onToggleFold, autoFocus, onAutoFocused, onEdit, onDelete }: CardProps) {
+function NoteCard({ title, body, readOnly, folded, onToggleFold, pinned, canPin, onTogglePin, autoFocus, onAutoFocused, onEdit, onDelete }: CardProps) {
   // What you're typing, untrimmed. The file gets a tidied version.
   const [draft, setDraft] = useState({ title, body });
   const editing = useRef(false);
@@ -142,7 +148,7 @@ function NoteCard({ title, body, readOnly, folded, onToggleFold, autoFocus, onAu
   };
 
   return (
-    <div className={`note-card${folded ? ' folded' : ''}`}>
+    <div className={`note-card${folded ? ' folded' : ''}${pinned ? ' pinned' : ''}`}>
       <div className="note-title-row">
         <button className="icon-button fold" aria-label={folded ? 'Show note' : 'Fold note'} aria-expanded={!folded} onClick={onToggleFold}>
           <Icon name={folded ? 'chevronRight' : 'chevronDown'} size={14} />
@@ -158,6 +164,11 @@ function NoteCard({ title, body, readOnly, folded, onToggleFold, autoFocus, onAu
           {...focus}
         />
         {folded && draft.body && <span className="note-folded-count">{wordCount(draft.body).toLocaleString()} words</span>}
+        {canPin && (
+          <button className={`icon-button${pinned ? ' on' : ''}`} aria-label={pinned ? 'Unpin from the writing area' : 'Pin below the writing area'} title={pinned ? 'Unpin' : 'Pin below the writing'} aria-pressed={pinned} onClick={onTogglePin}>
+            <Icon name="pin" size={16} />
+          </button>
+        )}
         {!readOnly && (
           <button className="icon-button" aria-label="Delete note" onClick={onDelete}>
             <Icon name="trash" size={16} />

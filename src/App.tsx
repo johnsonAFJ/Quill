@@ -6,9 +6,10 @@ import { describeError, disconnect, dropboxClient, finishSignInIfReturning, isCo
 import { DeviceStore } from './sync/deviceStore';
 import { DropboxRemote } from './sync/dropboxRemote';
 import { Engine } from './sync/engine';
+import { Snapshots } from './sync/snapshots';
 import { Workspace } from './ui/Workspace';
 
-type State = { state: 'starting' } | { state: 'signedOut'; message?: string } | { state: 'ready'; engine: Engine; store: DeviceStore };
+type State = { state: 'starting' } | { state: 'signedOut'; message?: string } | { state: 'ready'; engine: Engine; store: DeviceStore; snapshots: Snapshots };
 
 export function App() {
   const [status, setStatus] = useState<State>({ state: 'starting' });
@@ -25,7 +26,7 @@ export function App() {
         const store = new DeviceStore();
         const engine = new Engine(store, new DropboxRemote(dropboxClient()), deviceName());
         await engine.load();
-        setStatus({ state: 'ready', engine, store });
+        setStatus({ state: 'ready', engine, store, snapshots: new Snapshots(store) });
       } catch (err) {
         setStatus({ state: 'signedOut', message: describeError(err) });
       }
@@ -50,7 +51,7 @@ export function App() {
     );
   }
 
-  const { engine, store } = status;
+  const { engine, store, snapshots } = status;
   const onDisconnect = async () => {
     const pending = engine.status.pending;
     const warning =
@@ -63,5 +64,5 @@ export function App() {
     location.reload();
   };
 
-  return <Workspace engine={engine} onDisconnect={onDisconnect} />;
+  return <Workspace engine={engine} snapshots={snapshots} onDisconnect={onDisconnect} />;
 }

@@ -8,9 +8,13 @@ export type Note = {
   /** The heading without "## ", or "" for text before the first heading. */
   title: string;
   body: string;
+  /** Shown in a strip below the writing ("## Outline <!-- pinned -->" in the file). */
+  pinned: boolean;
 };
 
 const HEADING = /^## /m;
+const PIN_MARK = ' <!-- pinned -->';
+const PIN = /\s*<!-- pinned -->\s*$/;
 
 export function parseNotes(text: string): Note[] {
   if (!text.trim()) return [];
@@ -22,11 +26,13 @@ export function parseNotes(text: string): Note[] {
 }
 
 function toNote(raw: string): Note {
-  if (!HEADING.test(raw.slice(0, 3))) return { raw, title: '', body: raw.trim() };
+  if (!HEADING.test(raw.slice(0, 3))) return { raw, title: '', body: raw.trim(), pinned: false };
   const newline = raw.indexOf('\n');
-  const title = (newline < 0 ? raw.slice(3) : raw.slice(3, newline)).trim();
+  const heading = newline < 0 ? raw.slice(3) : raw.slice(3, newline);
+  const pinned = PIN.test(heading);
+  const title = heading.replace(PIN, '').trim();
   const body = newline < 0 ? '' : raw.slice(newline + 1).trim();
-  return { raw, title, body };
+  return { raw, title, body, pinned };
 }
 
 export function joinNotes(notes: Note[]): string {
@@ -38,12 +44,12 @@ export function joinNotes(notes: Note[]): string {
  * with an empty title, so it can't merge into the note above it. Only text
  * before the first heading (`headingless`) goes without one.
  */
-export function writeNote(title: string, body: string, headingless = false): Note {
-  const cleanTitle = title.replace(/\s+/g, ' ').trim();
+export function writeNote(title: string, body: string, headingless = false, pinned = false): Note {
+  const cleanTitle = title.replace(/\s+/g, ' ').replace(PIN, '').trim();
   const cleanBody = body.trim();
-  const heading = headingless && !cleanTitle ? '' : `## ${cleanTitle}\n`;
+  const heading = headingless && !cleanTitle ? '' : `## ${cleanTitle}${pinned ? PIN_MARK : ''}\n`;
   const raw = heading + (cleanBody ? `${cleanBody}\n` : '') + '\n';
-  return { raw, title: cleanTitle, body: cleanBody };
+  return { raw, title: cleanTitle, body: cleanBody, pinned: pinned && Boolean(heading) };
 }
 
 /** Replaces note `index` and returns the file's new text. */
@@ -51,8 +57,29 @@ export function updateNote(text: string, index: number, title: string, body: str
   const notes = parseNotes(text);
   const original = notes[index];
   if (!original) return text;
-  notes[index] = writeNote(title, body, index === 0 && !original.raw.startsWith('## '));
+  notes[index] = writeNote(title, body, index === 0 && !original.raw.startsWith('## '), original.pinned);
   return joinNotes(separate(notes));
+}
+
+/** Pins note `index` (unpinning any other: one pinned note per notes file), or unpins it. */
+export function togglePin(text: string, index: number): string {
+  const notes = parseNotes(text);
+  const target = notes[index];
+  if (!target || !target.raw.startsWith('## ')) return text;
+  const pinning = !target.pinned;
+  return joinNotes(
+    notes.map((n, i) => {
+      const wantPinned = i === index ? pinning : false;
+      if (n.pinned === wantPinned) return n;
+      const newline = n.raw.indexOf('\n');
+      const rest = newline < 0 ? '\n' : n.raw.slice(newline);
+      return { ...n, pinned: wantPinned, raw: `## ${n.title}${wantPinned ? PIN_MARK : ''}${rest}` };
+    }),
+  );
+}
+
+export function pinnedNote(text: string): Note | undefined {
+  return parseNotes(text).find((n) => n.pinned);
 }
 
 export function addNote(text: string, title = 'New note'): string {

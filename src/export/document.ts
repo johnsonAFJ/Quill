@@ -40,8 +40,12 @@ export function exportDocument(text: string, fallbackTitle: string): ExportDoc {
   return { title, bodyHtml: markdown.parse(body.trim(), { async: false }), words: wordCount(body) };
 }
 
-/** Manuscripts give a rounded count: "about 2,300 words". */
-export function roughWords(words: number): string {
-  if (words < 100) return `${words} word${words === 1 ? '' : 's'}`;
+/**
+ * The count on a manuscript's first page. Rounded by convention ("about
+ * 2,300 words"); exact when a market's guidelines ask for it or a word limit
+ * is close.
+ */
+export function manuscriptWords(words: number, round = true): string {
+  if (!round || words < 100) return `${words.toLocaleString('en-US')} word${words === 1 ? '' : 's'}`;
   return `about ${(Math.round(words / 100) * 100).toLocaleString('en-US')} words`;
 }

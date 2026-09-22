@@ -4,14 +4,15 @@
 import { markdown } from '@codemirror/lang-markdown';
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { defaultKeymap, history, historyKeymap, selectLine } from '@codemirror/commands';
-import { Annotation, EditorState, type Extension } from '@codemirror/state';
+import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, keymap, placeholder } from '@codemirror/view';
 import { tags as t } from '@lezer/highlight';
 import { bold, bulletList, insertLink, italic, quote, toggleComment, toggleHeading } from './formatting';
+import { sectionFolding } from './folding';
+import { sprintSlot } from './sprint';
 import { typewriter, typewriterSlot } from './typewriter';
 
-/** Marks changes that came from Dropbox rather than your typing. */
-export const External = Annotation.define<boolean>();
+export { External } from './annotations';
 
 const markdownStyle = HighlightStyle.define([
   { tag: t.heading1, fontSize: '1.6em', fontWeight: '700', letterSpacing: '-0.01em' },
@@ -71,6 +72,7 @@ export function createEditorState(text: string, readOnly: boolean, listeners: Ex
       formattingKeys,
       keymap.of([...historyKeymap, ...defaultKeymap]),
       markdown(),
+      sectionFolding,
       syntaxHighlighting(markdownStyle),
       EditorView.lineWrapping,
       EditorView.contentAttributes.of({ spellcheck: 'true', autocorrect: 'on', autocapitalize: 'sentences' }),
@@ -79,6 +81,7 @@ export function createEditorState(text: string, readOnly: boolean, listeners: Ex
       EditorView.editable.of(!readOnly),
       theme,
       typewriterSlot.of(typewriterOn ? typewriter : []),
+      sprintSlot.of([]),
       listeners,
     ],
   });

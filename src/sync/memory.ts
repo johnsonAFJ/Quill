@@ -3,7 +3,7 @@
 // makes: "only replace this exact version", "only create, never replace",
 // and moves that pick a new name instead of replacing.
 
-import { keyOf, parentOf } from './paths';
+import { TRASH, isWithin, keyOf, parentOf } from './paths';
 import {
   ConflictError,
   CursorResetError,
@@ -130,6 +130,15 @@ export class FakeDropbox implements Remote {
     const node = this.nodes.get(keyOf(from));
     if (!node || node.kind !== 'file') throw new NotFoundError(from);
     this.write(this.freeName(to), node.text!);
+  }
+
+  /** Deletes calls made by the engine; counted so tests can check nothing else was deleted. */
+  removed: string[] = [];
+  async remove(path: string) {
+    this.check();
+    if (!isWithin(path, TRASH) || keyOf(path) === keyOf(TRASH)) throw new Error(`Quill only deletes from Trash (refused: ${path}).`);
+    this.removed.push(path);
+    if (this.nodes.has(keyOf(path))) this.delete(path);
   }
 
   async createFolder(path: string) {

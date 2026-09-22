@@ -166,6 +166,29 @@ export class Engine {
     return keyOf(target);
   }
 
+  /**
+   * Deletes something in Trash for good (a sheet with its notes, or a group).
+   * Refuses anything outside Trash. Returns whether anything was deleted.
+   */
+  deletePermanently(key: string): boolean {
+    const item = this.files.get(key);
+    if (!item || item.key === keyOf(TRASH) || !isWithin(item.path, TRASH)) return false;
+    const targets = [item];
+    if (item.kind === 'file') {
+      const notes = this.files.get(keyOf(notesPathFor(item.path)));
+      if (notes) targets.push(notes);
+    }
+    for (const target of targets) {
+      const onRemote = this.all().some((f) => isWithin(f.path, target.path) && (f.kind === 'file' ? f.rev : f.onRemote));
+      // Anything still waiting to be sent there has nothing to send any more.
+      this.ops = this.ops.filter((op) => !(op.type === 'createFolder' && isWithin(op.path, target.path)));
+      if (onRemote) this.queue({ type: 'delete', path: target.path });
+      for (const f of this.all()) if (isWithin(f.path, target.path)) this.remove(f.key);
+    }
+    void this.store.setMeta('ops', this.ops);
+    return true;
+  }
+
   /** Puts a sheet back where it was deleted from, or at the top of the Library. */
   restore(key: string): string | null {
     const item = this.files.get(key);
@@ -247,7 +270,10 @@ export class Engine {
   private async pushOps(): Promise<void> {
     while (this.ops.length > 0) {
       const op = this.ops[0]!;
-      if (op.type === 'createFolder') {
+      if (op.type === 'delete') {
+        // The same rule again, right before anything leaves this device.
+        if (isWithin(op.path, TRASH) && keyOf(op.path) !== keyOf(TRASH)) await this.remote.remove(op.path);
+      } else if (op.type === 'createFolder') {
         await this.remote.createFolder(op.path);
         const folder = this.files.get(keyOf(op.path));
         if (folder) this.put({ ...folder, onRemote: true });

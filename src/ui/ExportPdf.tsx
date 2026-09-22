@@ -17,6 +17,7 @@ export function ExportPdf({ text, fallbackTitle, onClose }: Props) {
   const [style, setStyle] = useState<StyleId>(() => prefs.get('exportStyle', 'book'));
   const [name, setName] = useState<string>(() => prefs.get('exportName', ''));
   const [contact, setContact] = useState<string>(() => prefs.get('exportContact', ''));
+  const [roundWords, setRoundWords] = useState<boolean>(() => prefs.get('exportRoundWords', true));
   const [step, setStep] = useState<'choose' | 'preview'>('choose');
 
   // Until you've chosen a name, fill it in from your Dropbox account.
@@ -34,11 +35,12 @@ export function ExportPdf({ text, fallbackTitle, onClose }: Props) {
     prefs.set('exportStyle', style);
     prefs.set('exportName', name);
     prefs.set('exportContact', contact);
+    prefs.set('exportRoundWords', roundWords);
     setStep('preview');
   };
 
   if (step === 'preview') {
-    return <Preview text={text} fallbackTitle={fallbackTitle} style={style} name={name} contact={contact} onStyle={setStyle} onBack={() => setStep('choose')} onClose={onClose} />;
+    return <Preview text={text} fallbackTitle={fallbackTitle} style={style} name={name} contact={contact} roundWords={roundWords} onStyle={setStyle} onBack={() => setStep('choose')} onClose={onClose} />;
   }
 
   return (
@@ -70,6 +72,15 @@ export function ExportPdf({ text, fallbackTitle, onClose }: Props) {
             <small className="muted">Saved on this device only.</small>
           </label>
         )}
+        {style === 'manuscript' && (
+          <label className="check-field">
+            <input type="checkbox" checked={roundWords} onChange={(e) => setRoundWords(e.target.checked)} />
+            <span>
+              Round the word count
+              <small className="muted">“About 2,300 words” is the standard. Turn it off for an exact count when a word limit is close or the guidelines ask.</small>
+            </span>
+          </label>
+        )}
         <p className="muted small-print">Comments and notes are never included.</p>
         <div className="dialog-actions">
           <button className="quiet" onClick={onClose}>
@@ -88,17 +99,18 @@ type PreviewProps = {
   style: StyleId;
   name: string;
   contact: string;
+  roundWords: boolean;
   onStyle: (s: StyleId) => void;
   onBack: () => void;
   onClose: () => void;
 };
 
-function Preview({ text, fallbackTitle, style, name, contact, onStyle, onBack, onClose }: PreviewProps) {
+function Preview({ text, fallbackTitle, style, name, contact, roundWords, onStyle, onBack, onClose }: PreviewProps) {
   const frame = useRef<HTMLIFrameElement>(null);
   const [pages, setPages] = useState<number | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   const doc = useMemo(() => exportDocument(text, fallbackTitle), [text, fallbackTitle]);
-  const html = useMemo(() => exportPage(style, doc, { name: name.trim(), contact, date: new Date() }, pagedUrl, location.href), [style, doc, name, contact]);
+  const html = useMemo(() => exportPage(style, doc, { name: name.trim(), contact, roundWords, date: new Date() }, pagedUrl, location.href), [style, doc, name, contact, roundWords]);
 
   useEffect(() => {
     setPages(null);

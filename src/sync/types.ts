@@ -31,7 +31,9 @@ export type LocalFile = {
 
 export type Op =
   | { type: 'createFolder'; path: string }
-  | { type: 'move'; from: string; to: string };
+  | { type: 'move'; from: string; to: string }
+  /** Only ever for something inside Trash. */
+  | { type: 'delete'; path: string };
 
 export interface Store {
   allFiles(): Promise<LocalFile[]>;
@@ -65,6 +67,8 @@ export interface Remote {
   /** Never replaces: if the destination exists, Dropbox picks a new name and returns it. */
   move(from: string, to: string): Promise<{ path: string; rev?: string }>;
   copy(from: string, to: string): Promise<void>;
+  /** Deletes a file or folder. Refuses anything outside Trash. Succeeds quietly if it's already gone. */
+  remove(path: string): Promise<void>;
   /** Succeeds quietly if the folder already exists. */
   createFolder(path: string): Promise<void>;
 }

@@ -166,6 +166,57 @@ describe('safety', () => {
   });
 });
 
+describe('deleting permanently', () => {
+  it('deletes a sheet and its notes from Trash', async () => {
+    dropbox.write('/Essays/Draft.md', 'draft');
+    dropbox.write('/Essays/Draft.notes.md', '## Idea');
+    dropbox.write('/Essays/Keep.md', 'keep');
+    const engine = await started();
+    const trashed = engine.trash(keyOf('/Essays/Draft.md'))!;
+    await engine.sync();
+    expect(engine.deletePermanently(trashed)).toBe(true);
+    await engine.sync();
+    expect(dropbox.paths()).toEqual(['/Essays/Keep.md']);
+    expect(dropbox.removed).toEqual(['/_Trash/Draft.md', '/_Trash/Draft.notes.md']);
+    expect(engine.get(trashed)).toBeUndefined();
+  });
+
+  it('deletes a whole group in Trash', async () => {
+    dropbox.write('/Poems/Rain.md', 'rain');
+    const engine = await started();
+    const trashed = engine.trash(keyOf('/Poems'))!;
+    await engine.sync();
+    engine.deletePermanently(trashed);
+    await engine.sync();
+    expect(dropbox.paths()).toEqual([]);
+    expect(dropbox.removed).toEqual(['/_Trash/Poems']);
+  });
+
+  it('refuses anything outside Trash, and Trash itself', async () => {
+    dropbox.write('/Essays/Keep.md', 'keep');
+    dropbox.write('/_Trash/Old.md', 'old');
+    const engine = await started();
+    expect(engine.deletePermanently(keyOf('/Essays/Keep.md'))).toBe(false);
+    expect(engine.deletePermanently(keyOf('/Essays'))).toBe(false);
+    expect(engine.deletePermanently(keyOf('/_Trash'))).toBe(false);
+    await engine.sync();
+    expect(dropbox.paths()).toEqual(['/Essays/Keep.md', '/_Trash/Old.md']);
+    expect(dropbox.removed).toEqual([]);
+    await expect(dropbox.remove('/Essays/Keep.md')).rejects.toThrow(/only deletes from Trash/);
+  });
+
+  it('never sends something to Dropbox just to delete it', async () => {
+    const engine = await started();
+    const sheet = engine.createSheet('');
+    engine.setText(sheet.key, 'Typed offline');
+    const trashed = engine.trash(sheet.key)!;
+    engine.deletePermanently(trashed);
+    await engine.sync();
+    expect(dropbox.paths()).toEqual([]);
+    expect(dropbox.removed).toEqual([]);
+  });
+});
+
 describe('new sheets and groups', () => {
   it('names a new sheet once from its first line', async () => {
     const engine = await started();

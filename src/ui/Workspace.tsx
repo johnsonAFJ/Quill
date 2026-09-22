@@ -8,16 +8,23 @@ import { markUpdatesSeen, unseenUpdates, updates } from '../app/changelog';
 import { isTouch, prefs } from '../app/device';
 import { search, whereOf, type SearchHit } from '../library/search';
 import { buildLibrary, sortSheets, type SortOrder } from '../library/tree';
+import { wordCount } from '../text/markdown';
 import type { Engine } from '../sync/engine';
-import { parseNotes } from '../notes/notes';
+import type { Snapshots } from '../sync/snapshots';
+import { parseNotes, pinnedNote, togglePin } from '../notes/notes';
+import { QUICK_NOTES_PATH, appendQuickNote } from '../notes/quickNotes';
 import { PROMPTS_PATH, markUsed, mergeBatches, newPromptFile, pickPrompt, promptComment, unusedPrompts, usedCount } from '../prompts/prompts';
 import { PROMPT_BATCHES } from '../prompts/starter';
 import { TRASH, isWithin, keyOf, notesPathFor, parentOf } from '../sync/paths';
+import { EarlierVersions } from './EarlierVersions';
 import { EditorPane } from './EditorPane';
 import { ExportPdf } from './ExportPdf';
 import { ALL_VIEW, INBOX, LibraryPane, PROMPTS_VIEW, RECENT_VIEW, SEARCH_VIEW, SPECIAL_VIEWS, TRASH_VIEW } from './LibraryPane';
 import { NotesPanel } from './NotesPanel';
 import { PromptsPane } from './PromptsPane';
+import { QuickCapture } from './QuickCapture';
+import { ShortcutsDialog } from './ShortcutsDialog';
+import { SprintDialog, type SprintState } from './Sprint';
 import { SearchPane } from './SearchPane';
 import { WhatsNew } from './WhatsNew';
 import { ResizeHandle } from './ResizeHandle';
@@ -66,9 +73,9 @@ function usePref<T>(name: string, fallback: T): [T, (value: T) => void] {
   return [value, set];
 }
 
-type Props = { engine: Engine; onDisconnect: () => void };
+type Props = { engine: Engine; snapshots: Snapshots; onDisconnect: () => void };
 
-export function Workspace({ engine, onDisconnect }: Props) {
+export function Workspace({ engine, snapshots, onDisconnect }: Props) {
   const revision = useSyncExternalStore(
     useCallback((listener: () => void) => engine.subscribe(listener), [engine]),
     () => engine.getRevision(),
@@ -119,6 +126,12 @@ export function Workspace({ engine, onDisconnect }: Props) {
   const [lastGroup, setLastGroup] = usePref<string>('lastGroup', INBOX);
   const [query, setQuery] = useState('');
   const [exporting, setExporting] = useState(false);
+  const [capturing, setCapturing] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showVersions, setShowVersions] = useState(false);
+  const [sprint, setSprint] = useState<(SprintState & { key: string }) | null>(null);
+  const [sprintChoosing, setSprintChoosing] = useState(false);
+  const [sprintResult, setSprintResult] = useState<string | null>(null);
   // Updates this device hasn't seen yet pop up once; Settings shows them all.
   const [whatsNew, setWhatsNew] = useState<{ all: boolean } | null>(() => (unseenUpdates().length ? { all: false } : null));
   const collapsed = useMemo(() => new Set(collapsedList), [collapsedList]);
@@ -167,12 +180,54 @@ export function Workspace({ engine, onDisconnect }: Props) {
         : null;
   const notesText = notes ? (engine.get(keyOf(notes.path))?.text ?? '') : '';
   const sheetNotesCount = sheet?.kind === 'file' ? parseNotes(engine.get(keyOf(notesPathFor(sheet.path)))?.text ?? '').length : 0;
+  const sheetNotesPath = sheet?.kind === 'file' ? notesPathFor(sheet.path) : null;
+  const sheetNotesText = sheetNotesPath ? engine.get(keyOf(sheetNotesPath))?.text ?? '' : '';
+  const pinned = sheetNotesPath ? pinnedNote(sheetNotesText) : undefined;
+  const unpin = () => {
+    if (!sheetNotesPath) return;
+    const index = parseNotes(sheetNotesText).findIndex((n) => n.pinned);
+    if (index >= 0) engine.writeFile(sheetNotesPath, togglePin(sheetNotesText, index));
+  };
   const toggleSheetNotes = () => setNotesTarget(notesTarget?.kind === 'sheet' ? null : { kind: 'sheet' });
 
   // A group that no longer exists (deleted on another device): fall back to Inbox.
   useEffect(() => {
     if (!special && groupKey !== INBOX && !library.groups.has(groupKey)) setGroupKey(INBOX);
   }, [groupKey, library, setGroupKey]);
+
+  // ---- Rewind snapshots ----
+  // The first time you open a sheet in a session, keep a copy of it as it was.
+  // A session starts when Quill opens, or when you come back after 30 minutes away.
+  const snapshotted = useRef(new Set<string>());
+  useEffect(() => {
+    const file = currentKey ? engine.get(currentKey) : undefined;
+    if (!file || readOnly || snapshotted.current.has(file.id)) return;
+    snapshotted.current.add(file.id);
+    void snapshots.capture(file.id, file.text ?? '', 'opened');
+  }, [currentKey, engine, readOnly, snapshots]);
+  useEffect(() => {
+    let hiddenAt = 0;
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') hiddenAt = Date.now();
+      else if (hiddenAt && Date.now() - hiddenAt > 30 * 60_000) {
+        snapshotted.current.clear();
+        const file = currentKey ? engine.get(currentKey) : undefined;
+        if (file && !readOnly) {
+          snapshotted.current.add(file.id);
+          void snapshots.capture(file.id, file.text ?? '', 'opened');
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [currentKey, engine, readOnly, snapshots]);
+
+  const restoreVersion = async (text: string) => {
+    const file = currentKey ? engine.get(currentKey) : undefined;
+    if (!file) return;
+    await snapshots.capture(file.id, file.text ?? '', 'before restore');
+    engine.setText(file.key, text);
+  };
 
   // ---- Syncing ----
   const syncTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -287,10 +342,73 @@ export function Workspace({ engine, onDisconnect }: Props) {
 
   const toggleCollapsed = (key: string) => setCollapsedList(collapsed.has(key) ? collapsedList.filter((k) => k !== key) : [...collapsedList, key]);
 
-  // ⌘⇧F toggles focus mode.
+  // ---- Deleting from Trash ----
+  const deleteForGood = (key: string, name: string) => {
+    if (!confirm(`Delete “${name || 'Untitled'}” permanently?\n\nIt can’t be brought back in Quill. Dropbox keeps deleted files for 30 days at dropbox.com, under Deleted files.`)) return;
+    if (engine.deletePermanently(key) && (key === currentKey || (currentKey && isWithin(currentKey, key)))) setSheetKey(null);
+  };
+
+  // ---- Sprint ----
+  const activeSprint = sprint && sprint.key === currentKey ? sprint : null;
+  const startSprint = (minutes: number | null) => {
+    if (!currentKey || readOnly) return;
+    const now = Date.now();
+    setSprint({ key: currentKey, startedAt: now, endsAt: minutes ? now + minutes * 60_000 : null, startWords: wordCount(sheet?.text ?? '') });
+    setSprintChoosing(false);
+    setSprintResult(null);
+    setTimeout(() => document.querySelector<HTMLElement>('.cm-content')?.focus(), 50);
+  };
+  const endSprint = useCallback(
+    (timeUp: boolean) => {
+      setSprint((running) => {
+        if (running) {
+          const file = engine.get(running.key);
+          const written = Math.max(0, wordCount(file?.text ?? '') - running.startWords);
+          const minutes = Math.max(1, Math.round((Date.now() - running.startedAt) / 60_000));
+          setSprintResult(`${timeUp ? 'Time’s up! ' : ''}${written.toLocaleString()} new word${written === 1 ? '' : 's'} in ${minutes} minute${minutes === 1 ? '' : 's'}.`);
+        }
+        return null;
+      });
+    },
+    [engine],
+  );
+  // Leaving the sheet ends its sprint.
+  useEffect(() => {
+    if (sprint && sprint.key !== currentKey) endSprint(false);
+  }, [sprint, currentKey, endSprint]);
+
+  /** ⌥⌘N: a fresh sheet in the Inbox, from wherever you are. */
+  const newInboxSheet = () => {
+    const created = engine.createSheet('');
+    setGroupKey(INBOX);
+    openSheet(created.key);
+    setTimeout(() => document.querySelector<HTMLElement>('.cm-content')?.focus(), 50);
+  };
+
+  /** ⌘⇧J: add a jotted note to the bottom of Quick Notes. */
+  const saveQuickNote = (note: string) => engine.writeFile(QUICK_NOTES_PATH, appendQuickNote(engine.get(keyOf(QUICK_NOTES_PATH))?.text, note, new Date()));
+
+  // The shortcut handler below is set up once; this keeps it using the latest versions.
+  const toggleSprint = () => (activeSprint ? endSprint(false) : currentKey && !readOnly && setSprintChoosing(true));
+  const shortcuts = useRef({ newInboxSheet, toggleSprint, sprinting: Boolean(activeSprint) });
+  shortcuts.current = { newInboxSheet, toggleSprint, sprinting: Boolean(activeSprint) };
+
+  // ⌘⇧F focus mode, ⌘F search, ⌘⇧J quick note, ⌥⌘N new Inbox sheet.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'f') {
+      const mod = e.metaKey || e.ctrlKey;
+      if (e.key === 'Escape' && shortcuts.current.sprinting && !document.querySelector('.dialog')) {
+        endSprint(false);
+      } else if (mod && e.altKey && e.code === 'KeyS') {
+        e.preventDefault();
+        shortcuts.current.toggleSprint();
+      } else if (mod && e.shiftKey && e.code === 'KeyJ') {
+        e.preventDefault();
+        setCapturing(true);
+      } else if (mod && e.altKey && e.code === 'KeyN') {
+        e.preventDefault();
+        shortcuts.current.newInboxSheet();
+      } else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'f') {
         e.preventDefault();
         setPanes(focusMode ? 'all' : 'editor');
       } else if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'f') {
@@ -304,7 +422,7 @@ export function Workspace({ engine, onDisconnect }: Props) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [focusMode, setPanes]);
+  }, [focusMode, setPanes, endSprint]);
 
   // ---- Menus ----
   const groupMenu: MenuItem[] | undefined =
@@ -347,6 +465,7 @@ export function Workspace({ engine, onDisconnect }: Props) {
       : readOnly
       ? [
           { label: 'Put back', icon: 'restore', onSelect: () => setSheetKey(engine.restore(sheet.key)) },
+          { label: 'Delete permanently…', icon: 'trash', danger: true, onSelect: () => deleteForGood(sheet.key, library.sheets.get(sheet.key)?.title ?? library.trash.find((s) => s.key === sheet.key)?.title ?? '') },
           { label: 'Export PDF…', onSelect: () => setExporting(true) },
           { label: 'Word count', checked: showWords, onSelect: () => setShowWords(!showWords) },
         ]
@@ -365,10 +484,13 @@ export function Workspace({ engine, onDisconnect }: Props) {
               }),
           },
           { label: 'Export PDF…', onSelect: () => setExporting(true) },
+          { label: 'Earlier versions…', onSelect: () => setShowVersions(true) },
           'divider',
           { label: 'Word count', checked: showWords, onSelect: () => setShowWords(!showWords) },
           ...(layout === 'narrow' ? [] : [{ label: 'Focus mode', checked: focusMode, onSelect: () => setFocusMode(!focusMode) }]),
           ...typewriterItem,
+          { label: activeSprint ? 'End sprint' : 'Sprint…', onSelect: toggleSprint },
+          ...(touch ? [] : [{ label: 'Keyboard shortcuts', onSelect: () => setShowShortcuts(true) }]),
           'divider',
           {
             label: 'Move to Trash',
@@ -383,7 +505,14 @@ export function Workspace({ engine, onDisconnect }: Props) {
         ];
 
   // ---- Conflict banners ----
-  let banner: ReactNode = null;
+  let banner: ReactNode = sprintResult ? (
+    <div className="banner">
+      Sprint done: {sprintResult}
+      <button className="quiet small" onClick={() => setSprintResult(null)}>
+        OK
+      </button>
+    </div>
+  ) : null;
   const sheetInfo = currentKey ? library.sheets.get(currentKey) : undefined;
   if (sheetInfo && sheetInfo.conflicts.length > 0) {
     banner = (
@@ -484,6 +613,7 @@ export function Workspace({ engine, onDisconnect }: Props) {
                 const restored = engine.restore(key);
                 if (key === currentKey) setSheetKey(restored);
               },
+              onDelete: deleteForGood,
             }
           : undefined
       }
@@ -493,6 +623,7 @@ export function Workspace({ engine, onDisconnect }: Props) {
   const editorPane = (
     <EditorPane
       sheetKey={currentKey}
+      sheetId={sheet?.kind === 'file' ? sheet.id : null}
       text={sheet?.text ?? ''}
       readOnly={readOnly}
       unsynced={currentKey ? unsynced.has(currentKey) : false}
@@ -500,6 +631,8 @@ export function Workspace({ engine, onDisconnect }: Props) {
       focusMode={focusMode && layout !== 'narrow'}
       showWords={showWords}
       typewriterMode={typewriterOn && layout !== 'narrow'}
+      sprint={activeSprint}
+      onEndSprint={endSprint}
       menu={sheetMenu}
       banner={banner}
       onChange={onChange}
@@ -507,6 +640,8 @@ export function Workspace({ engine, onDisconnect }: Props) {
       onToggleFocus={layout === 'narrow' ? undefined : cyclePanes}
       onToggleWords={() => setShowWords(!showWords)}
       notesCount={isPromptList ? -1 : sheetNotesCount}
+      pinned={pinned && !isPromptList ? { title: pinned.title, body: pinned.body } : undefined}
+      onUnpin={unpin}
       notesOpen={notesTarget?.kind === 'sheet'}
       onToggleNotes={toggleSheetNotes}
     />
@@ -611,6 +746,12 @@ export function Workspace({ engine, onDisconnect }: Props) {
       {exporting && sheet?.kind === 'file' && (
         <ExportPdf text={sheet.text ?? ''} fallbackTitle={library.sheets.get(sheet.key)?.name ?? 'Untitled'} onClose={() => setExporting(false)} />
       )}
+      {showVersions && sheet?.kind === 'file' && (
+        <EarlierVersions fileId={sheet.id} snapshots={snapshots} onRestore={restoreVersion} onClose={() => setShowVersions(false)} />
+      )}
+      {sprintChoosing && <SprintDialog onStart={startSprint} onClose={() => setSprintChoosing(false)} />}
+      {capturing && <QuickCapture onSave={saveQuickNote} onClose={() => setCapturing(false)} />}
+      {showShortcuts && <ShortcutsDialog onClose={() => setShowShortcuts(false)} />}
       {whatsNew && (
         <WhatsNew
           updates={whatsNew.all ? updates : unseenUpdates()}

@@ -17,7 +17,7 @@ type Props = {
   /** In All and Last 7 Days: which group each sheet is in. */
   whereOf?: (path: string) => string;
   menu?: MenuItem[];
-  trash?: { groups: TrashedGroup[]; onRestore: (key: string) => void };
+  trash?: { groups: TrashedGroup[]; onRestore: (key: string) => void; onDelete: (key: string, name: string) => void };
   /** Keys of sheets with changes that haven't reached Dropbox. */
   unsynced: Set<string>;
 };
@@ -69,9 +69,14 @@ export function SheetList({ title, sheets, selectedKey, sort, onSort, onOpen, on
             <div className="card-preview">
               Group with {g.sheetCount} sheet{g.sheetCount === 1 ? '' : 's'}
             </div>
-            <button className="quiet small" onClick={() => trash.onRestore(g.key)}>
-              Put back
-            </button>
+            <div className="trash-actions">
+              <button className="quiet small" onClick={() => trash.onRestore(g.key)}>
+                Put back
+              </button>
+              <button className="quiet small danger" onClick={() => trash.onDelete(g.key, g.name)}>
+                Delete
+              </button>
+            </div>
           </div>
         ))}
         {sheets.map((s) => (
@@ -91,9 +96,14 @@ export function SheetList({ title, sheets, selectedKey, sort, onSort, onOpen, on
               {(s.conflicts.length > 0 || /\(conflict, /.test(s.name)) && <div className="badge">Conflict</div>}
             </button>
             {trash && (
-              <button className="quiet small" onClick={() => trash.onRestore(s.key)}>
-                Put back
-              </button>
+              <div className="trash-actions">
+                <button className="quiet small" onClick={() => trash.onRestore(s.key)}>
+                  Put back
+                </button>
+                <button className="quiet small danger" onClick={() => trash.onDelete(s.key, s.title)}>
+                  Delete
+                </button>
+              </div>
             )}
           </div>
         ))}

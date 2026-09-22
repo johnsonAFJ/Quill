@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addNote, joinNotes, parseNotes, removeNote, updateNote } from './notes';
+import { addNote, joinNotes, parseNotes, pinnedNote, removeNote, togglePin, updateNote } from './notes';
 
 const FILE = `Loose thoughts before any heading.
 
@@ -29,6 +29,29 @@ describe('parseNotes', () => {
 
   it('keeps "# " headings inside a note’s body', () => {
     expect(parseNotes('## A\n# Big\ntext\n').map((n) => n.body)).toEqual(['# Big\ntext']);
+  });
+});
+
+describe('pinning', () => {
+  it('pins a note by marking its heading, and unpins it again', () => {
+    const pinned = togglePin(FILE, 1);
+    expect(pinned).toContain('## Character ideas <!-- pinned -->\nPencroft is a sailor.');
+    expect(pinnedNote(pinned)).toMatchObject({ title: 'Character ideas', body: 'Pencroft is a sailor.\nHarding leads.' });
+    expect(togglePin(pinned, 1)).toBe(FILE);
+  });
+
+  it('keeps only one pinned note', () => {
+    const both = togglePin(togglePin(FILE, 1), 2);
+    expect(parseNotes(both).map((n) => n.pinned)).toEqual([false, false, true]);
+  });
+
+  it('stays pinned when the note is edited', () => {
+    const edited = updateNote(togglePin(FILE, 1), 1, 'Characters', 'Pencroft.');
+    expect(pinnedNote(edited)?.title).toBe('Characters');
+  });
+
+  it('can’t pin text that has no heading', () => {
+    expect(togglePin(FILE, 0)).toBe(FILE);
   });
 });
 

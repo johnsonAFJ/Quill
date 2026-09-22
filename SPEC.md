@@ -73,7 +73,7 @@ Dropbox/Apps/Quill Writer/
 
 These rules are part of version 1 and are not settings:
 
-1. **Nothing is ever truly deleted.** Deleting moves a sheet (and its notes) to `_Trash/`. Dropbox also keeps its own deleted files and version history for at least 30 days.
+1. **Deleting is two deliberate steps.** Deleting moves a sheet (and its notes) to `_Trash/`. Quill only removes something for good from Trash, and only when you choose Delete there. Dropbox also keeps its own deleted files and version history for at least 30 days.
 2. **No blind overwrites** (see Sync).
 3. **Blanking guard.** If a save would shrink a sheet from a lot of text to almost nothing, the old version is first copied to `_quill/backups/`.
 4. **Files you didn't edit are never touched.** No renaming, reformatting or rewriting, apart from the one-time rename of a new sheet.
@@ -182,7 +182,7 @@ Checked in Chrome on the Mac with the real Dropbox: adding notes as cards, the p
 
 ### Phase 3: PDF export (built 2026-09-22)
 - ••• → Export PDF… on any sheet. Three styles (`src/export/styles.ts`), Letter paper, fonts bundled with Quill (SIL Open Font License) so they work offline:
-  - **Manuscript:** Courier Prime 12 pt, double-spaced, 1" margins; name and contact top left and a rounded word count top right on page 1; title a third of the way down with "by Name"; header "Surname / Title / N" from page 2; `#` for scene breaks; END at the finish.
+  - **Manuscript:** Courier Prime 12 pt, double-spaced, 1" margins; name and contact top left and the word count top right on page 1 (rounded to the nearest hundred by convention, or exact with "Round the word count" turned off); title a third of the way down with "by Name"; header "Surname | Title | N" from page 2; `#` for scene breaks; END at the finish.
   - **Book:** EB Garamond 11.5 pt, justified per paragraph with hyphenation; small-caps title with a thin rule and the author; opening paragraph flush with a small-caps first line, indents after; `⁂` for scene breaks; page numbers bottom centre from page 2.
   - **Essay:** Inter headings over Source Serif 4 11 pt, ragged right, space between paragraphs; big left title with name · date · word count; accent bar on quotes; "N of M" bottom right.
 - Paged.js lays out the pages (Safari's own printing can't do page numbers or running headers); Quill starts it itself after the page loads, because its automatic start can miss its moment and wait forever. Paged.js pauses while the window is hidden and carries on when it's shown.
@@ -190,13 +190,23 @@ Checked in Chrome on the Mac with the real Dropbox: adding notes as cards, the p
 - Name on exports comes from the Dropbox account until changed; contact details are optional and stored per device only.
 - Saving opens the print window (File → Save as PDF). Required on the Mac; iPad is a bonus; iPhone not needed.
 
-### Phase 4: Seasonal themes
-- Themes that switch on for a date window (e.g. Halloween, Oct 15–31) and back afterwards: colours plus small touches on the frame, never in the writing area, nothing moving. A Settings switch and a "Not this year" button.
+### Phase 4: Writing flow and safety nets (built 2026-09-22)
+1. **Hotkeys:** ⌘/ with nothing selected comments out the whole paragraph; a keyboard shortcuts list (••• → Keyboard shortcuts); ⌥⌘N starts a new sheet in the Inbox from anywhere.
+2. **Quick capture (⌘⇧J):** a small box pops up anywhere in Quill; Return adds the text to the bottom of a "Quick Notes" sheet in the Inbox under the date and time, and you're back where you were. (For a truly system-wide shortcut, Apple's Shortcuts app can append to the same Dropbox file.)
+3. **Rewind snapshots:** when a sheet is opened in a new session, a copy is kept on the device; the last 20 per sheet are listed under ••• → Earlier versions with a preview and Restore. Restoring snapshots the current text first.
+4. **Folding:** an arrow beside each `##` heading folds its section away; remembered per device.
+5. **Pin a note:** any note card can be pinned; it shows as a slim, read-only, foldable strip at the bottom of the writing area. The pin is saved in the notes file, so every device shows it.
+6. **Sprint mode:** backspace works only within the sentence being typed, earlier text fades, an optional timer (10/15/25 min) and a count of words written in the sprint. Esc or the same shortcut ends it.
+7. **Delete permanently:** a Delete button on items in the Trash view, with a confirmation. Quill only ever deletes from Trash, and only when you choose Delete; Dropbox keeps deleted files for 30 more days.
 
 ### Ongoing
+- Seasonal themes, whenever one is wanted: Themes that switch on for a date window (e.g. Halloween, Oct 15–31) and back afterwards: colours plus small touches on the frame, never in the writing area, nothing moving. A Settings switch and a "Not this year" button.
 - More PDF styles, added one at a time.
 
 ### Future ideas
+- Reordering sections: move a `##` section up or down (e.g. ⌥⌘↑/↓), ideally with sections folded.
+- Smart paste: strip invisible characters and odd spacing, turn "•" bullets into "- " (curly quotes left alone).
+- Auto-delete Trash items after 60 days (would need the trash date stored where every device can see it, e.g. `_Trash/2026-09-22/…`).
 - Font choices, text size and line spacing (the current look is staying for now).
 - Word goals for each sheet, with a progress ring.
 - A "Writing music" button that opens a chosen playlist in the Spotify or Music app. (A player inside Quill was ruled out: Spotify's web player doesn't work on iPhone or iPad, and Apple Music's needs a $99/year developer membership.)

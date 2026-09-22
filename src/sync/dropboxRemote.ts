@@ -3,6 +3,7 @@
 
 import { DropboxResponseError, type Dropbox, type files } from 'dropbox';
 import { describeError } from '../dropbox/connection';
+import { TRASH, isWithin, keyOf } from './paths';
 import { ConflictError, CursorResetError, NotFoundError, type Remote, type RemoteEntry, type RemoteFile } from './types';
 
 function summary(err: unknown): string {
@@ -95,6 +96,17 @@ export class DropboxRemote implements Remote {
       await this.dbx.filesCopyV2({ from_path: from, to_path: to, autorename: true });
     } catch (err) {
       translate(err, from);
+    }
+  }
+
+  async remove(path: string) {
+    // Deleting is only ever allowed inside Trash, whatever asks for it.
+    if (!isWithin(path, TRASH) || keyOf(path) === keyOf(TRASH)) throw new Error(`Quill only deletes from Trash (refused: ${path}).`);
+    try {
+      await this.dbx.filesDeleteV2({ path });
+    } catch (err) {
+      if (summary(err).includes('not_found')) return; // already gone
+      translate(err, path);
     }
   }
 

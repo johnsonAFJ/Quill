@@ -15,7 +15,7 @@ import inter700 from '@fontsource/inter/files/inter-latin-700-normal.woff2?url';
 import serif400 from '@fontsource/source-serif-4/files/source-serif-4-latin-400-normal.woff2?url';
 import serif400i from '@fontsource/source-serif-4/files/source-serif-4-latin-400-italic.woff2?url';
 import serif700 from '@fontsource/source-serif-4/files/source-serif-4-latin-700-normal.woff2?url';
-import { cssString, escapeHtml, roughWords, type ExportDoc } from './document';
+import { cssString, escapeHtml, manuscriptWords, type ExportDoc } from './document';
 
 export type StyleId = 'manuscript' | 'book' | 'essay';
 
@@ -25,7 +25,13 @@ export const STYLES: { id: StyleId; name: string; blurb: string }[] = [
   { id: 'essay', name: 'Essay', blurb: 'Clean and modern for sharing: a sans-serif title, readable serif text and “3 of 7” page numbers.' },
 ];
 
-export type ExportInfo = { name: string; contact: string; date: Date };
+export type ExportInfo = {
+  name: string;
+  contact: string;
+  date: Date;
+  /** Manuscript: "about 2,300 words" (the convention) rather than the exact count. */
+  roundWords: boolean;
+};
 
 const face = (family: string, url: string, weight: number, style = 'normal') => ({ family, url, weight, style });
 
@@ -59,11 +65,11 @@ const surnameOf = (name: string) => name.trim().split(/\s+/).pop() ?? '';
 // ---- 1. Manuscript ----
 
 function manuscript(doc: ExportDoc, info: ExportInfo) {
-  const header = [surnameOf(info.name), doc.title].filter(Boolean).join(' / ');
+  const header = [surnameOf(info.name), doc.title].filter(Boolean).join(' | ');
   const contact = [info.name, ...info.contact.split('\n')].map((l) => l.trim()).filter(Boolean);
   const css = `
     @page { size: letter; margin: 1in;
-      @top-right { content: ${cssString(header + ' / ')} counter(page); font: 12pt 'Courier Prime', monospace; } }
+      @top-right { content: ${cssString(header + ' | ')} counter(page); font: 12pt 'Courier Prime', monospace; } }
     @page :first { @top-right { content: none; } }
     body { font: 12pt/2 'Courier Prime', 'Courier New', monospace; color: #000; }
     .front { display: flex; justify-content: space-between; line-height: 1.2; }
@@ -82,7 +88,7 @@ function manuscript(doc: ExportDoc, info: ExportInfo) {
   const html = `
     <div class="front">
       <div>${contact.map((l) => `<p>${escapeHtml(l)}</p>`).join('')}</div>
-      <p>${roughWords(doc.words)}</p>
+      <p>${manuscriptWords(doc.words, info.roundWords)}</p>
     </div>
     <div class="title-block">
       <h1>${escapeHtml(doc.title)}</h1>

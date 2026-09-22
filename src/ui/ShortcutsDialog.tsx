@@ -1,0 +1,57 @@
+import { Dialog } from './Overlays';
+
+const GROUPS: { title: string; keys: [string, string][] }[] = [
+  {
+    title: 'Formatting',
+    keys: [
+      ['⌘B', 'Bold'],
+      ['⌘I', 'Italic'],
+      ['⌘1  ⌘2  ⌘3', 'Heading 1, 2, 3'],
+      ['⌘\'', 'Quote'],
+      ['⌘⇧8', 'List'],
+      ['⌘K', 'Link'],
+      ['⌘/', 'Comment (not counted as words). Nothing selected: the whole paragraph'],
+    ],
+  },
+  {
+    title: 'Writing',
+    keys: [
+      ['⌘L', 'Select the paragraph (again for the next)'],
+      ['⌘Z  ⌘⇧Z', 'Undo, redo'],
+      ['⌘⇧F', 'Just the text (hide the sidebars)'],
+      ['⌥⌘S', 'Start or end a sprint'],
+      ['⌥⌘[  ⌥⌘]', 'Fold or show the section you’re in'],
+    ],
+  },
+  {
+    title: 'Anywhere in Quill',
+    keys: [
+      ['⌘⇧J', 'Quick note, added to “Quick Notes” in the Inbox'],
+      ['⌥⌘N', 'New sheet in the Inbox'],
+      ['⌘F', 'Search'],
+    ],
+  },
+];
+
+export function ShortcutsDialog({ onClose }: { onClose: () => void }) {
+  return (
+    <Dialog title="Keyboard shortcuts" onClose={onClose}>
+      {GROUPS.map((g) => (
+        <section key={g.title} className="settings-section">
+          <h3>{g.title}</h3>
+          <dl className="shortcuts">
+            {g.keys.map(([keys, what]) => (
+              <div key={keys}>
+                <dt>{keys}</dt>
+                <dd>{what}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      ))}
+      <div className="dialog-actions">
+        <button onClick={onClose}>Done</button>
+      </div>
+    </Dialog>
+  );
+}

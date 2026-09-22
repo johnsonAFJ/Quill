@@ -2,6 +2,17 @@
 
 Newest first. Each "##" heading is one update. Quill shows the updates you haven't seen yet, once per device, the first time you open it after an update.
 
+## Sep 22 · Sprints, quick notes, folding and earlier versions
+- **Sprint mode** (••• → Sprint…, or ⌥⌘S): backspace only works within the sentence you're typing, earlier text fades, and an optional 10, 15 or 25 minute timer counts your new words. Esc ends it.
+- **Quick notes** (⌘⇧J): jot a thought from anywhere in Quill; it's added to the bottom of "Quick Notes" in your Inbox with the date and time.
+- **New sheet in the Inbox** from anywhere with ⌥⌘N.
+- **Fold sections:** the small arrow beside a `##` heading folds that section away (or ⌥⌘[ and ⌥⌘]).
+- **Earlier versions** (••• menu): Quill keeps a copy of a sheet each time you start working on it, the last 20 on each device. Restoring keeps the current text as a version too.
+- **Pin a note** (the pin on a note card) to show it in a strip below the writing.
+- **⌘/ with nothing selected** now comments out the whole paragraph. See every shortcut under ••• → Keyboard shortcuts.
+- **Delete** things in Trash for good. Dropbox still keeps them for 30 days.
+- Manuscript exports now use "|" in the page header, and can show the exact word count instead of a rounded one.
+
 ## Sep 22 · PDF export
 - **Export PDF** from any sheet's ••• menu, in three styles: **Manuscript** (the standard submission format, double-spaced Courier with your name, contact details and word count on page 1), **Book** (a printed-page look in Garamond with a small-caps title) and **Essay** (clean and modern, with "3 of 7" page numbers).
 - See every page before saving, and switch styles right in the preview. Then **Save as PDF…** opens the print window; choose "Save as PDF" there.

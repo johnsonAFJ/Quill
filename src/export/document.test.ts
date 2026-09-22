@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cssString, exportDocument, roughWords } from './document';
+import { cssString, exportDocument, manuscriptWords } from './document';
 import { markLeads } from './styles';
 
 describe('exportDocument', () => {
@@ -28,11 +28,15 @@ describe('exportDocument', () => {
   });
 });
 
-describe('roughWords', () => {
+describe('manuscriptWords', () => {
   it('rounds to the nearest hundred, like a manuscript', () => {
-    expect(roughWords(2348)).toBe('about 2,300 words');
-    expect(roughWords(2351)).toBe('about 2,400 words');
-    expect(roughWords(42)).toBe('42 words');
+    expect(manuscriptWords(2348)).toBe('about 2,300 words');
+    expect(manuscriptWords(2351)).toBe('about 2,400 words');
+    expect(manuscriptWords(42)).toBe('42 words');
+  });
+  it('gives the exact count when asked', () => {
+    expect(manuscriptWords(2540, false)).toBe('2,540 words');
+    expect(manuscriptWords(1, false)).toBe('1 word');
   });
 });
 

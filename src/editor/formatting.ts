@@ -108,7 +108,8 @@ export const insertLink: StateCommand = ({ state, dispatch }) => {
 
 /**
  * Turns the selection into a comment (<!-- … -->), which doesn't count as
- * words. With the cursor inside a comment, or a comment selected, it unwraps it.
+ * words. With nothing selected, it comments out the whole paragraph the cursor
+ * is in. With the cursor inside a comment, or a comment selected, it unwraps it.
  */
 export const toggleComment: StateCommand = ({ state, dispatch }) => {
   const doc = state.doc.toString();
@@ -125,11 +126,26 @@ export const toggleComment: StateCommand = ({ state, dispatch }) => {
       ]);
       return { changes, range: EditorSelection.range(changes.mapPos(range.anchor, -1), changes.mapPos(range.head, -1)) };
     }
+    if (range.empty) {
+      const line = state.doc.lineAt(range.head);
+      // A blank line, or one that already has a comment in it: start a new comment here.
+      if (!line.text.trim() || line.text.includes('<!--')) {
+        return { changes: { from: range.head, insert: '<!--  -->' }, range: EditorSelection.cursor(range.head + 5) };
+      }
+      // Otherwise the whole paragraph (in Markdown, one line), keeping the cursor where it was.
+      const start = line.from + (line.text.length - line.text.trimStart().length);
+      const end = line.to - (line.text.length - line.text.trimEnd().length);
+      const changes = state.changes([
+        { from: start, insert: '<!-- ' },
+        { from: end, insert: ' -->' },
+      ]);
+      return { changes, range: EditorSelection.cursor(changes.mapPos(range.head, 1)) };
+    }
     const text = doc.slice(range.from, range.to);
     const insert = `<!-- ${text} -->`;
     return {
       changes: { from: range.from, to: range.to, insert },
-      range: text ? EditorSelection.range(range.from, range.from + insert.length) : EditorSelection.cursor(range.from + 5),
+      range: EditorSelection.range(range.from, range.from + insert.length),
     };
   });
   dispatch(state.update(tr, { scrollIntoView: true, userEvent: 'input.format' }));
