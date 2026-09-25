@@ -34,6 +34,14 @@ type Props = {
   onToggleNotes: () => void;
   outlineOpen: boolean;
   onToggleOutline: () => void;
+  /** Modes sit on the bar itself where there's room, and in the ••• menu where there isn't. */
+  modesOnBar: boolean;
+  sprinting: boolean;
+  onToggleSprint: () => void;
+  onToggleTypewriter: () => void;
+  /** Straight on/off, unlike the sidebar button on the left, which steps through the columns. */
+  onFocusMode: () => void;
+  onExport: () => void;
   /** Where the cursor sits, so the outline can show the section you're in. */
   onCursorChange: (at: number) => void;
   onChange: (text: string) => void;
@@ -43,7 +51,7 @@ type Props = {
 };
 
 export function EditorPane(props: Props) {
-  const { sheetKey, sheetId, text, readOnly, unsynced, touch, focusMode, showWords, typewriterMode, sprint, banned, onEndSprint, menu, banner, notesCount, pinned, onUnpin, notesOpen, onToggleNotes, outlineOpen, onToggleOutline, onCursorChange, onChange, onBack, onToggleFocus, onToggleWords } = props;
+  const { sheetKey, sheetId, text, readOnly, unsynced, touch, focusMode, showWords, typewriterMode, sprint, banned, onEndSprint, menu, banner, notesCount, pinned, onUnpin, notesOpen, onToggleNotes, outlineOpen, onToggleOutline, modesOnBar, sprinting, onToggleSprint, onToggleTypewriter, onFocusMode, onExport, onCursorChange, onChange, onBack, onToggleFocus, onToggleWords } = props;
   const viewRef = useRef<EditorView | null>(null);
   const [typing, setTyping] = useState(false);
   const [selected, setSelected] = useState('');
@@ -88,6 +96,32 @@ export function EditorPane(props: Props) {
               <Icon name="paperclip" />
               {notesCount > 0 && <span className="notes-count">{notesCount}</span>}
             </button>
+          )}
+          {modesOnBar && !readOnly && (
+            <>
+              <span className="bar-divider" />
+              <button className={`icon-button${focusMode ? ' on' : ''}`} aria-label="Focus mode" aria-pressed={focusMode} title="Focus mode: just the text (⌘⇧F)" onClick={onFocusMode}>
+                <Icon name="focus" />
+              </button>
+              <button
+                className={`icon-button${typewriterMode ? ' on' : ''}`}
+                aria-label="Typewriter mode"
+                aria-pressed={typewriterMode}
+                title="Typewriter mode: keep the line you're writing in the middle"
+                onClick={onToggleTypewriter}
+              >
+                <Icon name="typewriter" />
+              </button>
+              <button className={`icon-button${sprinting ? ' on' : ''}`} aria-label={sprinting ? 'End sprint' : 'Sprint'} aria-pressed={sprinting} title="Sprint: keep going forward (⌥⌘S)" onClick={onToggleSprint}>
+                <Icon name="timer" />
+              </button>
+              <button className={`icon-button${showWords ? ' on' : ''}`} aria-label="Word count" aria-pressed={showWords} title="Word count" onClick={onToggleWords}>
+                <Icon name="count" />
+              </button>
+              <button className="icon-button" aria-label="Export PDF" title="Export PDF…" onClick={onExport}>
+                <Icon name="pdf" />
+              </button>
+            </>
           )}
           <MenuButton items={menu} label="Sheet actions" />
         </div>

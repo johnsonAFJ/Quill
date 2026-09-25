@@ -661,7 +661,9 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
         ]
       : undefined;
 
-  const typewriterItem: MenuItem[] = layout === 'narrow' ? [] : [{ label: 'Typewriter mode', checked: typewriterOn, onSelect: () => setTypewriterOn(!typewriterOn) }];
+  /** With room on the bar, the modes live there as buttons instead of in this menu. */
+  const modesOnBar = layout !== 'narrow';
+  const typewriterItem: MenuItem[] = layout === 'narrow' || modesOnBar ? [] : [{ label: 'Typewriter mode', checked: typewriterOn, onSelect: () => setTypewriterOn(!typewriterOn) }];
   const sheetMenu: MenuItem[] = !sheet
     ? []
     : isPromptList
@@ -688,7 +690,7 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
                 },
               }),
           },
-          { label: 'Export PDF…', onSelect: () => setExporting(true) },
+          ...(modesOnBar ? [] : [{ label: 'Export PDF…', onSelect: () => setExporting(true) }]),
           { label: 'Find and replace', onSelect: findInSheet },
           { label: 'Save as template…', onSelect: saveAsTemplate },
           { label: 'Set aside', onSelect: setAside },
@@ -696,10 +698,10 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
           ...(canSpeak() ? [{ label: reading ? 'Stop reading' : 'Read to me', onSelect: () => (reading ? stopReading() : readAloud()) }] : []),
           { label: 'Earlier versions…', onSelect: () => setShowVersions(true) },
           'divider',
-          { label: 'Word count', checked: showWords, onSelect: () => setShowWords(!showWords) },
-          ...(layout === 'narrow' ? [] : [{ label: 'Focus mode', checked: focusMode, onSelect: () => setFocusMode(!focusMode) }]),
+          ...(modesOnBar ? [] : [{ label: 'Word count', checked: showWords, onSelect: () => setShowWords(!showWords) }]),
+          ...(layout === 'narrow' || modesOnBar ? [] : [{ label: 'Focus mode', checked: focusMode, onSelect: () => setFocusMode(!focusMode) }]),
           ...typewriterItem,
-          { label: activeSprint ? 'End sprint' : 'Sprint…', onSelect: toggleSprint },
+          ...(modesOnBar ? [] : [{ label: activeSprint ? 'End sprint' : 'Sprint…', onSelect: toggleSprint }]),
           { label: 'Banned words', checked: bannedOn, onSelect: toggleBanned },
           ...(bannedOn ? [{ label: 'Edit the banned list…', onSelect: openBannedList }] : []),
           ...(touch ? [] : [{ label: 'Keyboard shortcuts', onSelect: () => setShowShortcuts(true) }]),
@@ -890,6 +892,12 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
       onCursorChange={setCursorAt}
       notesOpen={notesTarget?.kind === 'sheet'}
       onToggleNotes={toggleSheetNotes}
+      modesOnBar={modesOnBar}
+      sprinting={Boolean(activeSprint)}
+      onToggleSprint={toggleSprint}
+      onToggleTypewriter={() => setTypewriterOn(!typewriterOn)}
+      onFocusMode={() => setFocusMode(!focusMode)}
+      onExport={() => setExporting(true)}
     />
   );
 

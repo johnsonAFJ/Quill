@@ -210,6 +210,9 @@ Checked in Chrome on the Mac with the real Dropbox: adding notes as cards, the p
 2. **Outline panel** (`src/outline/outline.ts`, `src/ui/OutlinePanel.tsx`): the sheet's own headings, numbered I / A / 1 for show only. Add, rename (double-click, Enter for the next, Tab to indent), move a section with its writing, and take one out — anything written in it goes to Cuts. It shares the right-hand column with Notes, stacked above them with a draggable strip between (`SplitHandle`; the share is remembered as `sideSplit`), and on iPhone it takes the editor's place like Notes does. Because it edits the headings in the sheet, there is no second document to keep in step.
 3. **Banned words** (`src/text/banned.ts`, `src/editor/banned.ts`): a nudge, never a block. `_Banned words.md` holds the list (hidden from the Library, prose lines in it are ignored so notes to self are safe); matches get a wavy underline and a tally under the sheet. Off unless switched on, per device. A strict mode that refuses the word was considered and dropped: fighting autocorrect mid-word is worse than the habit.
 
+### Working notes on the sheet bar
+Beside the writing: outline, notes, then (where the window is wider than a phone) focus, typewriter, sprint, word count and Export PDF as buttons that light up when on, with the ••• menu keeping the rest. On a phone those five stay in the menu. The left-hand sidebar button still steps through the columns; the focus button is a plain on/off.
+
 ### Next up
 - Try Quill on real devices: iPhone keyboard toolbar, swipe back, a real two-device conflict, the final Save as PDF step, installing on the iPad.
 
