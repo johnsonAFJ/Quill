@@ -154,6 +154,29 @@ describe('safety', () => {
     expect(dropbox.paths()).toEqual(['/Essays/On Walking.md', '/Essays/On Walking.notes.md']);
   });
 
+  it('takes a sheet’s cuts along to Trash and back', async () => {
+    dropbox.write('/Essays/On Walking.md', 'walk');
+    dropbox.write('/Essays/On Walking.cuts.md', '## Mon, Sep 21 · 9:14 PM\nA sentence I set aside.');
+    const engine = await started();
+
+    const trashed = engine.trash(keyOf('/Essays/On Walking.md'))!;
+    await engine.sync();
+    expect(dropbox.paths()).toEqual(['/_Trash/On Walking.cuts.md', '/_Trash/On Walking.md']);
+
+    engine.restore(trashed);
+    await engine.sync();
+    expect(dropbox.paths()).toEqual(['/Essays/On Walking.cuts.md', '/Essays/On Walking.md']);
+  });
+
+  it('renames a sheet’s cuts with it', async () => {
+    dropbox.write('/Essays/Draft.md', 'draft');
+    dropbox.write('/Essays/Draft.cuts.md', '## Mon, Sep 21 · 9:14 PM\nSet aside.');
+    const engine = await started();
+    engine.rename(keyOf('/Essays/Draft.md'), 'On Walking');
+    await engine.sync();
+    expect(dropbox.paths()).toEqual(['/Essays/On Walking.cuts.md', '/Essays/On Walking.md']);
+  });
+
   it('never replaces an existing sheet when moving to Trash', async () => {
     dropbox.write('/_Trash/Draft.md', 'older draft');
     dropbox.write('/Draft.md', 'newer draft');
@@ -179,6 +202,19 @@ describe('deleting permanently', () => {
     expect(dropbox.paths()).toEqual(['/Essays/Keep.md']);
     expect(dropbox.removed).toEqual(['/_Trash/Draft.md', '/_Trash/Draft.notes.md']);
     expect(engine.get(trashed)).toBeUndefined();
+  });
+
+  it('deletes a sheet’s cuts with it', async () => {
+    dropbox.write('/Essays/Draft.md', 'draft');
+    dropbox.write('/Essays/Draft.notes.md', '## Idea');
+    dropbox.write('/Essays/Draft.cuts.md', '## Mon, Sep 21 · 9:14 PM\nSet aside.');
+    const engine = await started();
+    const trashed = engine.trash(keyOf('/Essays/Draft.md'))!;
+    await engine.sync();
+    expect(engine.deletePermanently(trashed)).toBe(true);
+    await engine.sync();
+    expect(dropbox.paths()).toEqual([]);
+    expect(dropbox.removed).toEqual(['/_Trash/Draft.md', '/_Trash/Draft.notes.md', '/_Trash/Draft.cuts.md']);
   });
 
   it('deletes a whole group in Trash', async () => {
