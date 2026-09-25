@@ -1,6 +1,13 @@
 # What's new in Quill
 
-Newest first. Each "##" heading is one update. Quill shows the updates you haven't seen yet, once per device, the first time you open it after an update.
+Newest first. Each "##" heading is one update. Quill shows the updates you haven't seen yet, once per device, the first time you open it after an update. An update marked `<!-- with season: … -->` waits quietly until that season arrives.
+
+## 🎃 Quill puts on a costume <!-- with season: halloween -->
+- 🕯️ **Quill is dressed for Halloween.** The Library and the sheet list have gone candle-lit and pumpkin-dark, there's a cobweb in the corner, and the paper itself has warmed a shade. Your writing is untouched: same words, same ink, not a spider in sight.
+- 📖 **A line a day** waits at the foot of the Library, from Poe, Stoker, Shelley, the Macbeth witches and other old hands at this sort of thing. It changes at midnight.
+- 🦇 **Nothing moves, flickers, or jumps out at you.** It's a change of light, not a haunted house.
+- 👻 **Not in the mood?** Settings → Seasonal look → "Not this year" puts the costume away until next October, and "Off" retires seasons for good.
+- 🕸️ It packs itself away on November 1. Happy Halloween — go write something that makes the reader check the locks.
 
 ## Sep 24 · Cuts, and Quill reads to you
 - **Set aside (⌘⇧X,** or ••• → Set aside): takes the part you're not sure about out of the sheet and keeps it in **Cuts**, beside the sheet in Dropbox. With nothing selected it sets aside the paragraph you're in. Your clipboard is left alone.

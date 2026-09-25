@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseChangelog, unseen } from './changelog';
+import { parseChangelog, readyUpdates, unseen } from './changelog';
 
 const LOG = `# What's new
 
@@ -36,5 +36,32 @@ describe('unseen', () => {
   });
   it('shows only the latest on a fresh install', () => {
     expect(unseen(updates, null).map((u) => u.title)).toEqual(['Sep 22 · Three']);
+  });
+});
+
+describe('updates that wait for a season', () => {
+  const log = `# What's new
+
+## 🎃 A costume <!-- with season: halloween -->
+- spooky
+
+## Sep 22 · Three
+- c1
+`;
+  const all = parseChangelog(log);
+
+  it('reads the marker off the heading and keeps the title clean', () => {
+    expect(all[0]).toEqual({ title: '🎃 A costume', items: ['spooky'], season: 'halloween' });
+    expect(all[1]!.season).toBeUndefined();
+  });
+
+  it('stays hidden until its season is showing', () => {
+    expect(readyUpdates(all, null).map((u) => u.title)).toEqual(['Sep 22 · Three']);
+    expect(readyUpdates(all, { id: 'halloween' }).map((u) => u.title)).toEqual(['🎃 A costume', 'Sep 22 · Three']);
+  });
+
+  it('is the newest thing once it shows, so it pops up on its own', () => {
+    const showing = readyUpdates(all, { id: 'halloween' });
+    expect(unseen(showing, 'Sep 22 · Three').map((u) => u.title)).toEqual(['🎃 A costume']);
   });
 });
