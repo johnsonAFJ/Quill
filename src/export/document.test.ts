@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { markDropCap } from './styles';
 import { cssString, exportDocument, manuscriptWords } from './document';
 import { markLeads } from './styles';
 
@@ -57,5 +58,19 @@ describe('markLeads', () => {
       '<p class="lead">',
       '<p>',
     ]);
+  });
+});
+
+describe('the big first letter in Ghost Story', () => {
+  it('wraps the opening letter only', () => {
+    expect(markDropCap('<p>The tide went out.</p>\n<p>Then it came back.</p>')).toBe('<p><span class="drop">T</span>he tide went out.</p>\n<p>Then it came back.</p>');
+  });
+
+  it('takes an opening quotation mark with it', () => {
+    expect(markDropCap('<p>“Listen,” he said.</p>')).toBe('<p><span class="drop">“L</span>isten,” he said.</p>');
+  });
+
+  it('leaves a sheet that starts with a heading alone', () => {
+    expect(markDropCap('<h2>One</h2>\n<p>Words.</p>')).toBe('<h2>One</h2>\n<p>Words.</p>');
   });
 });

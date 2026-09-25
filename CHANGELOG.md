@@ -9,6 +9,10 @@ Newest first. Each "##" heading is one update. Quill shows the updates you haven
 - 👻 **Not in the mood?** Settings → Seasonal look → "Not this year" puts the costume away until next October, and "Off" retires seasons for good.
 - 🕸️ It packs itself away on November 1. Happy Halloween — go write something that makes the reader check the locks.
 
+## Sep 25 · A fourth PDF style: Ghost Story
+- **Export PDF → Ghost Story:** for something spooky. The uneven ink of a 1600s English press (IM Fell English, bundled with Quill), a small-caps title, a big first letter three lines deep, justified text, and page numbers between dashes at the foot.
+- No pictures and no decorations, just old type. It suits a ghost story, and it suits anything you want to feel older than it is.
+
 ## Sep 24 · Cuts, and Quill reads to you
 - **Set aside (⌘⇧X,** or ••• → Set aside): takes the part you're not sure about out of the sheet and keeps it in **Cuts**, beside the sheet in Dropbox. With nothing selected it sets aside the paragraph you're in. Your clipboard is left alone.
 - **••• → Cuts** lists everything you've set aside, newest first, with the date and word count. **Put back here** drops a piece in at your cursor as its own paragraph; **Delete** asks first. Cuts never count towards your words, and they follow the sheet if you rename or trash it.

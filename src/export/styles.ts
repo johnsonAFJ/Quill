@@ -1,4 +1,4 @@
-// The three PDF "paint jobs". Each is a stylesheet for Paged.js, which lays
+// The PDF "paint jobs". Each is a stylesheet for Paged.js, which lays
 // the sheet out on Letter pages and adds page numbers and running headers.
 // Fonts are bundled with Quill (all under the SIL Open Font License), so an
 // export looks the same on every device, even offline.
@@ -6,6 +6,9 @@
 import courier400 from '@fontsource/courier-prime/files/courier-prime-latin-400-normal.woff2?url';
 import courier400i from '@fontsource/courier-prime/files/courier-prime-latin-400-italic.woff2?url';
 import courier700 from '@fontsource/courier-prime/files/courier-prime-latin-700-normal.woff2?url';
+import fell400 from '@fontsource/im-fell-english/files/im-fell-english-latin-400-normal.woff2?url';
+import fell400i from '@fontsource/im-fell-english/files/im-fell-english-latin-400-italic.woff2?url';
+import fellSc from '@fontsource/im-fell-english-sc/files/im-fell-english-sc-latin-400-normal.woff2?url';
 import garamond400 from '@fontsource/eb-garamond/files/eb-garamond-latin-400-normal.woff2?url';
 import garamond400i from '@fontsource/eb-garamond/files/eb-garamond-latin-400-italic.woff2?url';
 import garamond600 from '@fontsource/eb-garamond/files/eb-garamond-latin-600-normal.woff2?url';
@@ -17,12 +20,13 @@ import serif400i from '@fontsource/source-serif-4/files/source-serif-4-latin-400
 import serif700 from '@fontsource/source-serif-4/files/source-serif-4-latin-700-normal.woff2?url';
 import { cssString, escapeHtml, manuscriptWords, type ExportDoc } from './document';
 
-export type StyleId = 'manuscript' | 'book' | 'essay';
+export type StyleId = 'manuscript' | 'book' | 'essay' | 'ghost';
 
 export const STYLES: { id: StyleId; name: string; blurb: string }[] = [
   { id: 'manuscript', name: 'Manuscript', blurb: 'The standard submission format: typewriter font, double-spaced, your name and word count on page 1.' },
   { id: 'book', name: 'Book', blurb: 'Like a printed page: a classic serif, justified text, a small-caps title and page numbers at the foot.' },
   { id: 'essay', name: 'Essay', blurb: 'Clean and modern for sharing: a sans-serif title, readable serif text and “3 of 7” page numbers.' },
+  { id: 'ghost', name: 'Ghost Story', blurb: 'For something spooky: the uneven ink of a 1600s press, a big first letter, and page numbers between dashes.' },
 ];
 
 export type ExportInfo = {
@@ -42,6 +46,9 @@ const FONTS = [
   face('EB Garamond', garamond400, 400),
   face('EB Garamond', garamond400i, 400, 'italic'),
   face('EB Garamond', garamond600, 600),
+  face('IM Fell English', fell400, 400),
+  face('IM Fell English', fell400i, 400, 'italic'),
+  face('IM Fell English SC', fellSc, 400),
   face('Inter', inter400, 400),
   face('Inter', inter600, 600),
   face('Inter', inter700, 700),
@@ -175,7 +182,47 @@ function essay(doc: ExportDoc, info: ExportInfo) {
   return { css, html };
 }
 
-const BUILD = { manuscript, book, essay };
+// ---- 4. Ghost Story ----
+
+/** Wraps the first letter of the opening paragraph, for the big capital. */
+export function markDropCap(bodyHtml: string): string {
+  return bodyHtml.replace(/^(<p[^>]*>)(["“'‘]?)(\w)/, '$1<span class="drop">$2$3</span>');
+}
+
+function ghost(doc: ExportDoc, info: ExportInfo) {
+  const css = `
+    @page { size: letter; margin: 1.15in 1.4in 1.2in;
+      @bottom-center { content: '— ' counter(page) ' —'; font: 10.5pt 'IM Fell English', serif; color: #3a3330; } }
+    @page :first { @bottom-center { content: none; } }
+    /* Old presses printed unevenly; the ink was never quite black. */
+    body { font: 12.5pt/1.62 'IM Fell English', 'EB Garamond', Georgia, serif; color: #17120f; font-kerning: normal; font-variant-ligatures: common-ligatures; }
+    .title-block { text-align: center; margin: 1.5in 0 0.7in; }
+    .title-block h1 { font-family: 'IM Fell English SC', 'IM Fell English', serif; font-weight: 400; font-size: 30pt; line-height: 1.15; letter-spacing: 0.04em; margin: 0; }
+    .title-block .rule { width: 1.6in; border-top: 0.6pt solid #4a423e; margin: 0.26in auto 0.2in; }
+    .title-block .author { font-family: 'IM Fell English SC', serif; font-size: 11.5pt; letter-spacing: 0.1em; margin: 0; }
+    .title-block .ornament { margin: 0.3in 0 0; font-size: 13pt; color: #4a423e; }
+    .body p { margin: 0; text-indent: 1.3em; text-align: justify; hyphens: auto; -webkit-hyphens: auto; orphans: 2; widows: 2; }
+    .body p.lead { text-indent: 0; }
+    /* The opening letter sits three lines deep, the way a chapter used to start. */
+    .drop { float: left; font-size: 3.25em; line-height: 0.86; padding: 0.02em 0.11em 0 0; font-family: 'IM Fell English SC', 'IM Fell English', serif; }
+    .body p.opening::first-line { font-family: 'IM Fell English SC', 'IM Fell English', serif; letter-spacing: 0.05em; }
+    .body h2, .body h3 { font-family: 'IM Fell English SC', serif; font-weight: 400; letter-spacing: 0.07em; text-align: center; font-size: 13.5pt; margin: 1.7em 0 0.9em; }
+    .body blockquote { margin: 0.7em 1.7em; font-style: italic; }
+    .scene-break { text-align: center !important; margin: 1em 0 !important; letter-spacing: 0.4em; }
+    .scene-break::before { content: '⁂'; }
+  `;
+  const html = `
+    <div class="title-block">
+      <h1>${escapeHtml(doc.title)}</h1>
+      <div class="rule"></div>
+      ${info.name ? `<p class="author">${escapeHtml(info.name)}</p>` : ''}
+      <p class="ornament">⁂</p>
+    </div>
+    <div class="body">${markDropCap(markLeads(doc.bodyHtml))}</div>`;
+  return { css, html };
+}
+
+const BUILD = { manuscript, book, essay, ghost };
 
 /**
  * Shown only on screen, around the pages: grey desk, white paper. Never
