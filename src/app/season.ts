@@ -17,7 +17,18 @@ export type Season = {
   when: string;
 };
 
-export const SEASONS: Season[] = [{ id: 'halloween', name: 'Halloween', from: [10, 15], to: [11, 1], when: 'October 15 to November 1' }];
+// The start date was drawn at random between October 1 and 15 and is deliberately
+// not written down anywhere Alex reads: he asked to be surprised by it.
+export const SEASONS: Season[] = [{ id: 'halloween', name: 'Halloween', from: [10, 8], to: [11, 1], when: 'sometime in October, through November 1' }];
+
+/**
+ * A look at a season before its day comes. Alex asked for the preview to close
+ * at noon Eastern on 2026-09-26 so the real thing arrives as a surprise; after
+ * that, "Show me now" behaves like "When it's time" and Settings stops offering it.
+ */
+export const PREVIEW_UNTIL = new Date('2026-09-26T16:00:00Z');
+
+export const previewOpen = (now: Date): boolean => now < PREVIEW_UNTIL;
 
 /** Settings: follow the calendar, keep one on to look at it, or no seasons at all. */
 export type SeasonChoice = 'auto' | 'on' | 'off';
@@ -43,7 +54,7 @@ export function skipMark(season: Season, date: Date): string {
 /** The season to show, given the setting and the ones skipped this year. */
 export function seasonNow(date: Date, choice: SeasonChoice, skipped: string[] = []): Season | null {
   if (choice === 'off') return null;
-  if (choice === 'on') return SEASONS[0] ?? null;
+  if (choice === 'on' && previewOpen(date)) return SEASONS[0] ?? null;
   return SEASONS.find((s) => inWindow(s, date) && !skipped.includes(skipMark(s, date))) ?? null;
 }
 
