@@ -36,7 +36,7 @@ import { OutlinePanel } from './OutlinePanel';
 import { TemplatesDialog, type TemplateChoice } from './TemplatesDialog';
 import { SearchPane } from './SearchPane';
 import { WhatsNew } from './WhatsNew';
-import { ResizeHandle } from './ResizeHandle';
+import { ResizeHandle, SplitHandle } from './ResizeHandle';
 import { NameDialog, type MenuItem, type NameRequest } from './Overlays';
 import { SettingsDialog } from './SettingsDialog';
 import { SheetList } from './SheetList';
@@ -139,6 +139,8 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
   const [showCuts, setShowCuts] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [outlineOpen, setOutlineOpen] = usePref('outline', false);
+  /** How much of the side column the outline takes when notes are open too. */
+  const [sideSplit, setSideSplit] = usePref('sideSplit', 45);
   const [cursorAt, setCursorAt] = useState(0);
   const [reading, setReading] = useState<{ index: number; total: number; paused: boolean } | null>(null);
   const [showVersions, setShowVersions] = useState(false);
@@ -882,7 +884,8 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
       outlineOpen={outlineOpen}
       onToggleOutline={() => {
         setOutlineOpen(!outlineOpen);
-        if (!outlineOpen) setNotesTarget(null);
+        // On a phone there's only room for one panel at a time.
+        if (!outlineOpen && layout === 'narrow') setNotesTarget(null);
       }}
       onCursorChange={setCursorAt}
       notesOpen={notesTarget?.kind === 'sheet'}
@@ -936,8 +939,21 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
   // ---- Columns ----
   const showLibrary = layout === 'wide' && panes === 'all';
   const showList = !focusMode;
-  const sidePanel = outlinePanel || notesPanel;
-  const showNotes = layout === 'wide' && Boolean(sidePanel);
+  /**
+   * The outline and notes share the column beside the writing, stacked, with a
+   * strip between them to drag. Either one alone takes the whole column.
+   */
+  const sidePanel =
+    outlinePanel && notesPanel ? (
+      <div className="stacked-panels" style={{ gridTemplateRows: `minmax(0, ${sideSplit}fr) auto minmax(0, ${100 - sideSplit}fr)` }}>
+        {outlinePanel}
+        <SplitHandle share={sideSplit} onResize={setSideSplit} onReset={() => setSideSplit(45)} />
+        {notesPanel}
+      </div>
+    ) : (
+      outlinePanel || notesPanel
+    );
+  const showNotes = layout !== 'narrow' && Boolean(sidePanel);
   const columns =
     layout === 'narrow'
       ? 'minmax(0, 1fr)'
