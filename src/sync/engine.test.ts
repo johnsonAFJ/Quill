@@ -332,3 +332,57 @@ describe('new sheets and groups', () => {
     expect(engine.status.pending).toBe(0);
   });
 });
+
+describe('moving things around', () => {
+  it('moves a sheet into another group, notes and cuts along with it', async () => {
+    dropbox.write('/Short Stories/Echo.md', 'echo');
+    dropbox.write('/Short Stories/Echo.notes.md', '## Idea');
+    dropbox.write('/Short Stories/Echo.cuts.md', '## Mon, Sep 21 · 9:14 PM\nSet aside.');
+    dropbox.write('/Essays/Keep.md', 'keep');
+    const engine = await started();
+    const moved = engine.moveTo(keyOf('/Short Stories/Echo.md'), '/Essays');
+    await engine.sync();
+    expect(moved).toBe(keyOf('/Essays/Echo.md'));
+    expect(dropbox.paths()).toEqual(['/Essays/Echo.cuts.md', '/Essays/Echo.md', '/Essays/Echo.notes.md', '/Essays/Keep.md']);
+  });
+
+  it('moves a group out of another, everything inside it too', async () => {
+    dropbox.write('/Short Stories/Prompted/Echo.md', 'echo');
+    dropbox.write('/Short Stories/Prompted/The Recording.md', 'tape');
+    const engine = await started();
+    expect(engine.moveTo(keyOf('/Short Stories/Prompted'), '')).toBe(keyOf('/Prompted'));
+    await engine.sync();
+    expect(dropbox.paths()).toEqual(['/Prompted/Echo.md', '/Prompted/The Recording.md']);
+  });
+
+  it('puts a group inside another', async () => {
+    dropbox.write('/Prompted/Echo.md', 'echo');
+    dropbox.write('/Short Stories/Keep.md', 'keep');
+    const engine = await started();
+    engine.moveTo(keyOf('/Prompted'), '/Short Stories');
+    await engine.sync();
+    expect(dropbox.paths()).toEqual(['/Short Stories/Keep.md', '/Short Stories/Prompted/Echo.md']);
+  });
+
+  it('never overwrites a sheet with the same name', async () => {
+    dropbox.write('/Essays/Echo.md', 'the essay');
+    dropbox.write('/Short Stories/Echo.md', 'the story');
+    const engine = await started();
+    expect(engine.moveTo(keyOf('/Short Stories/Echo.md'), '/Essays')).toBe(keyOf('/Essays/Echo 2.md'));
+    await engine.sync();
+    expect(dropbox.text('/Essays/Echo.md')).toBe('the essay');
+    expect(dropbox.text('/Essays/Echo 2.md')).toBe('the story');
+  });
+
+  it('won’t put a group inside itself, or move things in or out of Trash', async () => {
+    dropbox.write('/Short Stories/Prompted/Echo.md', 'echo');
+    dropbox.write('/Essays/Keep.md', 'keep');
+    dropbox.write('/_Trash/Old.md', 'old');
+    const engine = await started();
+    expect(engine.moveTo(keyOf('/Short Stories'), '/Short Stories/Prompted')).toBeNull();
+    expect(engine.moveTo(keyOf('/Short Stories'), '/Short Stories')).toBeNull();
+    expect(engine.moveTo(keyOf('/Essays/Keep.md'), '/_Trash')).toBeNull();
+    expect(engine.moveTo(keyOf('/_Trash/Old.md'), '/Essays')).toBeNull();
+    expect(engine.moveTo(keyOf('/Essays/Keep.md'), '/Essays')).toBeNull();
+  });
+});

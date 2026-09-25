@@ -2,6 +2,9 @@ import { prefs } from '../app/device';
 import { quoteOfDay, seasonNow, type SeasonChoice } from '../app/season';
 import type { Group, Library } from '../library/tree';
 import type { SyncStatus } from '../sync/engine';
+import { useState, type DragEvent } from 'react';
+import { draggedKey, isQuillDrag, startDrag, useLongPress } from './drag';
+import { isTouch } from '../app/device';
 import { Icon, type IconName } from './icons';
 
 export const INBOX = '';
@@ -26,10 +29,36 @@ type Props = {
   onToggle: (groupKey: string) => void;
   onNewGroup: () => void;
   onSettings: () => void;
+  /** A sheet or group dropped on a group ("" for the Inbox, the top of the Library). */
+  onDropItem?: (key: string, folder: string) => void;
+  /** Press and hold a group on a touch screen: pick it up to move it. */
+  onMoveGroup?: (key: string) => void;
 };
 
-export function LibraryPane({ library, selected, collapsed, status, recentCount, promptsLeft, onSelect, onToggle, onNewGroup, onSettings }: Props) {
+export function LibraryPane({ library, selected, collapsed, status, recentCount, promptsLeft, onSelect, onToggle, onNewGroup, onSettings, onDropItem, onMoveGroup }: Props) {
+  const hold = useLongPress((key) => onMoveGroup?.(key));
+  const holdGroup = onMoveGroup && isTouch() ? hold : undefined;
   const trashCount = library.trash.length + library.trashGroups.length;
+  const [over, setOver] = useState<string | null>(null);
+  /** Makes a row a place to drop things. `folder` is where they land. */
+  const dropTarget = (folder: string) =>
+    onDropItem
+      ? {
+          onDragOver: (e: DragEvent) => {
+            if (!isQuillDrag(e)) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            setOver(folder);
+          },
+          onDragLeave: () => setOver((o) => (o === folder ? null : o)),
+          onDrop: (e: DragEvent) => {
+            e.preventDefault();
+            setOver(null);
+            const key = draggedKey(e);
+            if (key) onDropItem(key, folder);
+          },
+        }
+      : {};
   return (
     <nav className="pane library-pane" aria-label="Library">
       <header className="pane-header">
@@ -49,14 +78,14 @@ export function LibraryPane({ library, selected, collapsed, status, recentCount,
       </header>
 
       <div className="pane-body">
-        <Row icon="inbox" label="Inbox" count={library.root.sheets.length} active={selected === INBOX} onClick={() => onSelect(INBOX)} />
+        <Row icon="inbox" label="Inbox" count={library.root.sheets.length} active={selected === INBOX} onClick={() => onSelect(INBOX)} dropOver={over === ''} drop={dropTarget('')} />
         <Row icon="stack" label="All" count={library.sheets.size} active={selected === ALL_VIEW} onClick={() => onSelect(ALL_VIEW)} />
         <Row icon="clock" label="Last 7 Days" count={recentCount} active={selected === RECENT_VIEW} onClick={() => onSelect(RECENT_VIEW)} />
         <Row icon="sparkle" label="Prompts" count={promptsLeft ?? 0} active={selected === PROMPTS_VIEW} onClick={() => onSelect(PROMPTS_VIEW)} />
         <Row icon="calendar" label="Writing log" active={selected === LOG_VIEW} onClick={() => onSelect(LOG_VIEW)} />
         {library.root.groups.length > 0 && <div className="section-label">Groups</div>}
         {sortGroups(library.root.groups).map((g) => (
-          <GroupRow key={g.key} group={g} depth={0} selected={selected} collapsed={collapsed} onSelect={onSelect} onToggle={onToggle} />
+          <GroupRow key={g.key} group={g} depth={0} selected={selected} collapsed={collapsed} onSelect={onSelect} onToggle={onToggle} over={over} dropTarget={dropTarget} draggable={Boolean(onDropItem)} hold={holdGroup} />
         ))}
         {library.root.groups.length === 0 && (
           <p className="hint">
@@ -93,9 +122,11 @@ function sortGroups(groups: Group[]): Group[] {
   return [...groups].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
 }
 
-function Row({ icon, label, count = 0, active, onClick }: { icon: IconName; label: string; count?: number; active: boolean; onClick: () => void }) {
+type DropHandlers = { onDragOver?: (e: DragEvent) => void; onDragLeave?: () => void; onDrop?: (e: DragEvent) => void };
+
+function Row({ icon, label, count = 0, active, onClick, dropOver, drop }: { icon: IconName; label: string; count?: number; active: boolean; onClick: () => void; dropOver?: boolean; drop?: DropHandlers }) {
   return (
-    <button className={`library-row${active ? ' active' : ''}`} onClick={onClick}>
+    <button className={`library-row${active ? ' active' : ''}${dropOver ? ' drop-over' : ''}`} onClick={onClick} {...drop}>
       <span className="row-lead" />
       <Icon name={icon} />
       <span className="row-label">{label}</span>
@@ -111,14 +142,26 @@ type GroupRowProps = {
   collapsed: Set<string>;
   onSelect: (key: string) => void;
   onToggle: (key: string) => void;
+  /** The folder a drag is hovering over, to light that row up. */
+  over: string | null;
+  dropTarget: (folder: string) => DropHandlers;
+  draggable: boolean;
+  hold?: ReturnType<typeof useLongPress>;
 };
 
-function GroupRow({ group, depth, selected, collapsed, onSelect, onToggle }: GroupRowProps) {
+function GroupRow({ group, depth, selected, collapsed, onSelect, onToggle, over, dropTarget, draggable, hold }: GroupRowProps) {
   const hasChildren = group.groups.length > 0;
   const open = !collapsed.has(group.key);
   return (
     <>
-      <div className={`library-row${selected === group.key ? ' active' : ''}`} style={{ paddingLeft: `${0.25 + depth * 1.1}rem` }}>
+      <div
+        className={`library-row${selected === group.key ? ' active' : ''}${over === group.path ? ' drop-over' : ''}`}
+        style={{ paddingLeft: `${0.25 + depth * 1.1}rem` }}
+        draggable={draggable}
+        onDragStart={(e) => startDrag(e, group.key)}
+        {...dropTarget(group.path)}
+        {...(hold ? hold(group.key) : {})}
+      >
         {hasChildren ? (
           <button className="row-lead disclosure" aria-label={open ? 'Collapse' : 'Expand'} onClick={() => onToggle(group.key)}>
             <Icon name={open ? 'chevronDown' : 'chevronRight'} size={14} />
@@ -135,7 +178,7 @@ function GroupRow({ group, depth, selected, collapsed, onSelect, onToggle }: Gro
       {hasChildren &&
         open &&
         sortGroups(group.groups).map((g) => (
-          <GroupRow key={g.key} group={g} depth={depth + 1} selected={selected} collapsed={collapsed} onSelect={onSelect} onToggle={onToggle} />
+          <GroupRow key={g.key} group={g} depth={depth + 1} selected={selected} collapsed={collapsed} onSelect={onSelect} onToggle={onToggle} over={over} dropTarget={dropTarget} draggable={draggable} hold={hold} />
         ))}
     </>
   );

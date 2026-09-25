@@ -34,6 +34,7 @@ import { QuickCapture } from './QuickCapture';
 import { ShortcutsDialog } from './ShortcutsDialog';
 import { SprintDialog, type SprintState } from './Sprint';
 import { CutsDialog } from './CutsDialog';
+import { MoveDialog } from './MoveDialog';
 import { OutlinePanel } from './OutlinePanel';
 import { TemplatesDialog, type TemplateChoice } from './TemplatesDialog';
 import { SearchPane } from './SearchPane';
@@ -139,6 +140,8 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
   const [capturing, setCapturing] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showCuts, setShowCuts] = useState(false);
+  /** The sheet or group being moved with the "Move to…" picker. */
+  const [moving, setMoving] = useState<string | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
   const [outlineOpen, setOutlineOpen] = usePref('outline', false);
   /** How much of the side column the outline takes when notes are open too. */
@@ -439,6 +442,29 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
     setShowTemplates(true);
   };
 
+  // ---- Moving sheets and groups ----
+  /**
+   * Moves a sheet or group into `folder` ("" for the top of the Library) and
+   * keeps whatever you had open in view: the open sheet, or the group you're in,
+   * follows it even when it was inside the thing that moved.
+   */
+  const moveItem = (key: string, folder: string) => {
+    const item = engine.get(key);
+    if (!item) return;
+    const from = item.path;
+    const newKey = engine.moveTo(key, folder);
+    setMoving(null);
+    if (!newKey) return;
+    const to = engine.get(newKey)?.path;
+    if (!to) return;
+    const follow = (path: string) => (isWithin(path, from) ? keyOf(to + path.slice(from.length)) : null);
+    const openSheet_ = sheet?.path ? follow(sheet.path) : null;
+    if (openSheet_) setSheetKey(openSheet_);
+    const openGroup = group?.path ? follow(group.path) : null;
+    if (openGroup) setGroupKey(openGroup);
+  };
+  const movingItem = moving ? engine.get(moving) : undefined;
+
   // ---- Cuts: text set aside from the sheet, kept beside it ----
   const cutsPath = sheet?.kind === 'file' ? cutsPathFor(sheet.path) : null;
   const cutsText = cutsPath ? (engine.get(keyOf(cutsPath))?.text ?? '') : '';
@@ -680,6 +706,7 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
           { label: 'Group notes', icon: 'paperclip', onSelect: () => setNotesTarget({ kind: 'group', key: group.key }) },
           { label: 'New sheet from template…', icon: 'stack', onSelect: openTemplates },
           { label: 'New group inside…', icon: 'folder', onSelect: () => newGroup(group.path) },
+          { label: 'Move group to…', onSelect: () => setMoving(group.key) },
           {
             label: 'Rename group…',
             onSelect: () =>
@@ -737,6 +764,7 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
               }),
           },
           ...(modesOnBar ? [] : [{ label: 'Export PDF…', onSelect: () => setExporting(true) }]),
+          { label: 'Move to…', onSelect: () => setMoving(sheet.key) },
           { label: 'Find and replace', onSelect: findInSheet },
           { label: 'Save as template…', onSelect: saveAsTemplate },
           { label: 'Set aside', onSelect: setAside },
@@ -849,6 +877,8 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
       onToggle={toggleCollapsed}
       onNewGroup={() => newGroup('')}
       onSettings={() => setSettingsOpen(true)}
+      onDropItem={layout === 'narrow' ? undefined : moveItem}
+      onMoveGroup={setMoving}
     />
   );
 
@@ -878,6 +908,7 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
       sort={sort}
       onSort={setSort}
       onOpen={openSheet}
+      onMove={setMoving}
       onBack={backToLibrary}
       onNew={group ? newSheet : undefined}
       onPrompt={group ? promptInGroup : undefined}
@@ -1094,6 +1125,18 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
       {sprintChoosing && <SprintDialog onStart={startSprint} onClose={() => setSprintChoosing(false)} />}
       {capturing && <QuickCapture onSave={saveQuickNote} onClose={() => setCapturing(false)} />}
       {showShortcuts && <ShortcutsDialog onClose={() => setShowShortcuts(false)} />}
+      {movingItem && (
+        <MoveDialog
+          library={library}
+          item={{
+            path: movingItem.path,
+            name: movingItem.kind === 'folder' ? baseName(movingItem.path) : library.sheets.get(movingItem.key)?.title || stem(baseName(movingItem.path)),
+            isGroup: movingItem.kind === 'folder',
+          }}
+          onMove={(folder) => moveItem(movingItem.key, folder)}
+          onClose={() => setMoving(null)}
+        />
+      )}
       {showTemplates && (
         <TemplatesDialog
           templates={templates}

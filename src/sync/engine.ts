@@ -140,6 +140,28 @@ export class Engine {
     return keyOf(target);
   }
 
+  /**
+   * Moves a sheet (with its notes and cuts) or a group (with everything in it)
+   * into another group, or to the top of the Library when `folder` is "".
+   * Never overwrites: a name already taken there gets a number. Refuses to
+   * move a group inside itself, to move anything into or out of Trash (Trash
+   * has its own buttons), or to move a sheet's hidden companions on their own.
+   * Returns the item's new key, or null if nothing moved.
+   */
+  moveTo(key: string, folder: string): string | null {
+    const item = this.files.get(key);
+    if (!item || item.key === keyOf(TRASH) || isWithin(item.path, TRASH) || isWithin(folder, TRASH)) return null;
+    if (folder !== '' && this.files.get(keyOf(folder))?.kind !== 'folder') return null;
+    if (item.kind === 'folder' && isWithin(folder, item.path)) return null;
+    if (keyOf(parentOf(item.path)) === keyOf(folder)) return null;
+    const name = item.kind === 'file' ? stem(baseName(item.path)) : baseName(item.path);
+    const target = this.freePath(folder, name, item.kind === 'file' ? '.md' : '');
+    this.moveWithNotes(item, target);
+    const moved = this.byId(item.id);
+    if (moved?.provisional) this.put({ ...moved, provisional: false });
+    return keyOf(target);
+  }
+
   /** Moves a sheet or group to Trash. Returns the key it has there, if any. */
   trash(key: string): string | null {
     const item = this.files.get(key);

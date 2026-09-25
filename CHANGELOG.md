@@ -9,6 +9,12 @@ Newest first. Each "##" heading is one update. Quill shows the updates you haven
 - 👻 **Not in the mood?** Settings → Seasonal look → "Not this year" puts the costume away until next October, and "Off" retires seasons for good.
 - 🕸️ It packs itself away on November 1. Happy Halloween — go write something that makes the reader check the locks.
 
+## Sep 25 · Move sheets and groups
+- **Move anything:** a sheet's ••• menu has **Move to…**, and a group's has **Move group to…**. Pick where it goes from a list of your groups, or "Inbox" for the top of the Library. A sheet's notes and cuts go with it; a group takes everything inside it.
+- **On the Mac and iPad, just drag:** drop a sheet from the list onto a group in the Library, or drag one group onto another to tuck it inside. Drop a group on **Inbox** to bring it back out to the top level.
+- **On the iPhone, press and hold** a sheet or a group and the Move picker comes up.
+- Nothing is ever replaced: if the new place already has something with the same name, the one you moved gets a number.
+
 ## Sep 25 · A quiet writing log
 - **Writing log**, in the Library under Prompts: a month at a time, each day a square that's darker the more you wrote. Flip back through earlier months with the arrows, and tap a day to see the words written, what you cut, your sprints and which sheets you worked in.
 - It counts the words **you add as you type**, not your net total, so a day of cutting and revising never looks like a bad day. Changes Quill makes for you (templates, the outline, anything arriving from another device) don't count.

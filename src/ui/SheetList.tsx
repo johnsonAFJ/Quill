@@ -1,4 +1,6 @@
 import type { Sheet, SortOrder, TrashedGroup } from '../library/tree';
+import { isTouch } from '../app/device';
+import { startDrag, useLongPress } from './drag';
 import { Icon } from './icons';
 import { MenuButton, type MenuItem } from './Overlays';
 
@@ -9,6 +11,8 @@ type Props = {
   sort: SortOrder;
   onSort: (order: SortOrder) => void;
   onOpen: (key: string) => void;
+  /** Press and hold on a touch screen: pick the sheet up to move it. */
+  onMove?: (key: string) => void;
   onBack?: () => void;
   /** Absent in Trash, where nothing new is made. */
   onNew?: () => void;
@@ -22,7 +26,8 @@ type Props = {
   unsynced: Set<string>;
 };
 
-export function SheetList({ title, sheets, selectedKey, sort, onSort, onOpen, onBack, onNew, onPrompt, whereOf, menu, trash, unsynced }: Props) {
+export function SheetList({ title, sheets, selectedKey, sort, onSort, onOpen, onMove, onBack, onNew, onPrompt, whereOf, menu, trash, unsynced }: Props) {
+  const hold = useLongPress((key) => onMove?.(key));
   const empty = sheets.length === 0 && (trash?.groups.length ?? 0) === 0;
   return (
     <section className="pane sheet-pane" aria-label={title}>
@@ -80,7 +85,13 @@ export function SheetList({ title, sheets, selectedKey, sort, onSort, onOpen, on
           </div>
         ))}
         {sheets.map((s) => (
-          <div key={s.key} className={`sheet-card${s.key === selectedKey ? ' active' : ''}`}>
+          <div
+            key={s.key}
+            className={`sheet-card${s.key === selectedKey ? ' active' : ''}`}
+            draggable={!trash && !isTouch()}
+            onDragStart={(e) => startDrag(e, s.key)}
+            {...(!trash && onMove && isTouch() ? hold(s.key) : {})}
+          >
             <button className="card-main" onClick={() => onOpen(s.key)}>
               <div className="card-title">
                 {unsynced.has(s.key) && <span className="dot" aria-label="Not synced yet" />}
