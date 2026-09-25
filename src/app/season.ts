@@ -67,7 +67,8 @@ export const QUOTES: Record<SeasonId, Quote[]> = {
     { line: 'Beware; for I am fearless, and therefore powerful.', from: 'Mary Shelley, Frankenstein' },
     { line: 'I ought to be thy Adam, but I am rather the fallen angel.', from: 'Mary Shelley, Frankenstein' },
     { line: 'Nothing is so painful to the human mind as a great and sudden change.', from: 'Mary Shelley, Frankenstein' },
-    { line: 'By the pricking of my thumbs, something wicked this way comes.', from: 'William Shakespeare, Macbeth' },
+    // The line Ray Bradbury took his title from. His own words are still in copyright, so the witches get the credit.
+    { line: 'By the pricking of my thumbs, something wicked this way comes.', from: 'William Shakespeare, Macbeth — later borrowed by Ray Bradbury' },
     { line: 'Double, double toil and trouble; fire burn and cauldron bubble.', from: 'William Shakespeare, Macbeth' },
     { line: 'There are more things in heaven and earth, Horatio, than are dreamt of in your philosophy.', from: 'William Shakespeare, Hamlet' },
     { line: 'Man is not truly one, but truly two.', from: 'Robert Louis Stevenson, Dr Jekyll and Mr Hyde' },
@@ -80,6 +81,10 @@ export const QUOTES: Record<SeasonId, Quote[]> = {
     { line: 'That is not dead which can eternal lie, and with strange aeons even death may die.', from: 'H. P. Lovecraft, “The Call of Cthulhu”' },
     { line: 'Along the shore the cloud waves break, the twin suns sink behind the lake.', from: 'Robert W. Chambers, The King in Yellow' },
     { line: 'The faint figure behind seemed to shake the pattern, just as if she wanted to get out.', from: 'Charlotte Perkins Gilman, “The Yellow Wallpaper”' },
+    { line: 'Once upon a midnight dreary, while I pondered, weak and weary.', from: 'Edgar Allan Poe, “The Raven”' },
+    { line: 'Be with me always — take any form — drive me mad!', from: 'Emily Brontë, Wuthering Heights' },
+    { line: 'And Darkness and Decay and the Red Death held illimitable dominion over all.', from: 'Edgar Allan Poe, “The Masque of the Red Death”' },
+    { line: 'It was a dark and stormy night.', from: 'Edward Bulwer-Lytton, Paul Clifford' },
   ],
 };
 
