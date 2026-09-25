@@ -46,6 +46,8 @@ export const TRASH_FOLDER = '_Trash';
 const GROUP_NOTES = '_notes.md';
 /** The prompt list (see src/prompts). It opens from "Prompts" in the Library, not as a sheet. */
 const PROMPT_LIST = '_prompts.md';
+/** Your banned-word list (see src/text/banned.ts). Opened from the sheet's ••• menu, not the list. */
+const BANNED_LIST = '_banned words.md';
 const SHEET_NOTES_SUFFIX = '.notes.md';
 /** Pieces set aside from a sheet (see src/cuts). Hidden, like notes. */
 const SHEET_CUTS_SUFFIX = '.cuts.md';
@@ -60,7 +62,7 @@ export function roleOf(name: string, kind: Entry['kind']): Role {
     return name.startsWith('_') ? 'hidden' : 'group';
   }
   if (lower === GROUP_NOTES) return 'groupNotes';
-  if (lower === PROMPT_LIST) return 'other';
+  if (lower === PROMPT_LIST || lower === BANNED_LIST) return 'other';
   if (lower.endsWith(SHEET_NOTES_SUFFIX)) return 'sheetNotes';
   if (lower.endsWith(SHEET_CUTS_SUFFIX)) return 'sheetCuts';
   if (lower.endsWith('.md')) return 'sheet';

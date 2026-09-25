@@ -643,6 +643,17 @@ button.danger {
   gap: 0.5rem;
 }
 
+.banned-tally {
+  position: absolute;
+  left: 1rem;
+  bottom: calc(env(safe-area-inset-bottom) + 0.6rem);
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--danger);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
 .word-count {
   position: absolute;
   right: 1rem;
@@ -865,6 +876,99 @@ button.danger {
 .notes-pane {
   background: var(--list);
   border-left: 1px solid var(--line);
+}
+
+.outline-pane {
+  background: var(--list);
+  border-left: 1px solid var(--line);
+}
+
+.outline-pane .panel-title {
+  font-weight: 600;
+}
+
+.outline-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.outline-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 8px;
+  min-height: 2rem;
+}
+
+.outline-list li:hover {
+  background: var(--hover);
+}
+
+.outline-list li.on {
+  background: var(--active);
+}
+
+.outline-number {
+  flex: none;
+  min-width: 1.6em;
+  font-size: 0.76rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.outline-title {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  background: transparent;
+  color: var(--text);
+  padding: 0.3rem 0.1rem;
+  font-size: 0.92rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.outline-input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 0.92rem;
+  padding: 0.25rem 0.4rem;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+}
+
+.outline-actions {
+  display: none;
+  flex: none;
+  align-items: center;
+}
+
+.outline-list li:hover .outline-actions,
+.outline-list li.on .outline-actions {
+  display: flex;
+}
+
+.outline-actions .icon-button {
+  padding: 0.25rem;
+}
+
+.outline-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.6rem 0.25rem 0;
+}
+
+.outline-foot {
+  padding: 0.6rem 1rem calc(env(safe-area-inset-bottom) + 0.6rem);
+  border-top: 1px solid var(--line);
+  font-size: 0.78rem;
 }
 
 .icon-button.done {

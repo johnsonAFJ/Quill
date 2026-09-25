@@ -2,6 +2,7 @@ import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { prefs } from '../app/device';
 import type { EditorView } from '@codemirror/view';
 import { Editor } from '../editor/Editor';
+import { tallyBanned, tallyLabel } from '../text/banned';
 import { wordCount } from '../text/markdown';
 import { FormatBar } from './FormatBar';
 import { SprintBar, type SprintState } from './Sprint';
@@ -20,6 +21,8 @@ type Props = {
   showWords: boolean;
   typewriterMode: boolean;
   sprint: SprintState | null;
+  /** Words to underline as you write, and count below the sheet. Empty when off. */
+  banned: string[];
   onEndSprint: (timeUp: boolean) => void;
   menu: MenuItem[];
   banner?: ReactNode;
@@ -29,6 +32,10 @@ type Props = {
   onUnpin: () => void;
   notesOpen: boolean;
   onToggleNotes: () => void;
+  outlineOpen: boolean;
+  onToggleOutline: () => void;
+  /** Where the cursor sits, so the outline can show the section you're in. */
+  onCursorChange: (at: number) => void;
   onChange: (text: string) => void;
   onBack?: () => void;
   onToggleFocus?: () => void;
@@ -36,7 +43,7 @@ type Props = {
 };
 
 export function EditorPane(props: Props) {
-  const { sheetKey, sheetId, text, readOnly, unsynced, touch, focusMode, showWords, typewriterMode, sprint, onEndSprint, menu, banner, notesCount, pinned, onUnpin, notesOpen, onToggleNotes, onChange, onBack, onToggleFocus, onToggleWords } = props;
+  const { sheetKey, sheetId, text, readOnly, unsynced, touch, focusMode, showWords, typewriterMode, sprint, banned, onEndSprint, menu, banner, notesCount, pinned, onUnpin, notesOpen, onToggleNotes, outlineOpen, onToggleOutline, onCursorChange, onChange, onBack, onToggleFocus, onToggleWords } = props;
   const viewRef = useRef<EditorView | null>(null);
   const [typing, setTyping] = useState(false);
   const [selected, setSelected] = useState('');
@@ -44,6 +51,7 @@ export function EditorPane(props: Props) {
   const [pinFolded, setPinFolded] = useState<boolean>(() => prefs.get('pinFolded', touch));
   const words = useMemo(() => (showWords || sprint ? wordCount(text) : 0), [showWords, sprint, text]);
   const selectedWords = useMemo(() => (showWords && selected ? wordCount(selected) : 0), [showWords, selected]);
+  const tally = useMemo(() => (banned.length ? tallyBanned(text, banned) : []), [banned, text]);
 
   if (!sheetKey) {
     return (
@@ -71,6 +79,11 @@ export function EditorPane(props: Props) {
           {unsynced && <span className="dot" title="Saved on this device, not in Dropbox yet" />}
           {readOnly && <span className="readonly-label">In Trash</span>}
           {notesCount >= 0 && (
+            <button className={`icon-button${outlineOpen ? ' on' : ''}`} aria-label="Outline" aria-pressed={outlineOpen} title="Outline" onClick={onToggleOutline}>
+              <Icon name="outline" />
+            </button>
+          )}
+          {notesCount >= 0 && (
             <button className={`icon-button${notesOpen ? ' on' : ''}`} aria-label={`Notes (${notesCount})`} aria-pressed={notesOpen} title="Notes" onClick={onToggleNotes}>
               <Icon name="paperclip" />
               {notesCount > 0 && <span className="notes-count">{notesCount}</span>}
@@ -82,7 +95,10 @@ export function EditorPane(props: Props) {
       {banner}
       {sprint && <SprintBar sprint={sprint} words={words} onEnd={onEndSprint} />}
       {!touch && !readOnly && !focusMode && <FormatBar viewRef={viewRef} floating={false} />}
-      <Editor sheetKey={sheetKey} foldKey={sheetId ?? sheetKey} text={text} readOnly={readOnly} typewriterMode={typewriterMode} sprintMode={Boolean(sprint) && !readOnly} onChange={onChange} onFocusChange={setTyping} onSelectionChange={setSelected} viewRef={viewRef} />
+      <Editor sheetKey={sheetKey} foldKey={sheetId ?? sheetKey} text={text} readOnly={readOnly} typewriterMode={typewriterMode} sprintMode={Boolean(sprint) && !readOnly} banned={banned} onChange={onChange} onFocusChange={setTyping} onSelectionChange={(text, cursor) => {
+          setSelected(text);
+          onCursorChange(cursor);
+        }} viewRef={viewRef} />
       {pinned && (
         <aside className={`pinned-note${pinFolded ? ' folded' : ''}`} aria-label="Pinned note">
           <header>
@@ -107,6 +123,11 @@ export function EditorPane(props: Props) {
         </aside>
       )}
       {touch && typing && !readOnly && <FormatBar viewRef={viewRef} floating />}
+      {tally.length > 0 && (
+        <p className="banned-tally" title="Words from your banned list (••• → Banned words)">
+          {tallyLabel(tally)}
+        </p>
+      )}
       {showWords && (
         <button className="word-count" onClick={onToggleWords} title="Hide word count">
           {selectedWords > 0 ? `${selectedWords.toLocaleString()} of ` : ''}

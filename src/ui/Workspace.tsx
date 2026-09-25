@@ -8,18 +8,20 @@ import { openSearchPanel } from '@codemirror/search';
 import { EditorView } from '@codemirror/view';
 import { markUpdatesSeen, unseenUpdates, updates } from '../app/changelog';
 import { addCut, parseCuts, removeCut } from '../cuts/cuts';
+import { BANNED_PATH, STARTER_LIST, parseBannedList } from '../text/banned';
+import { STARTER_TEMPLATE, TEMPLATES_FOLDER, TEMPLATES_PATH, fillIn, isTemplate } from '../templates/templates';
 import { Reader, canSpeak, pieceAt, piecesOf } from '../speech/speech';
 import { isTouch, prefs } from '../app/device';
 import { search, whereOf, type SearchHit } from '../library/search';
 import { buildLibrary, sortSheets, type SortOrder } from '../library/tree';
-import { wordCount } from '../text/markdown';
+import { safeFileName, wordCount } from '../text/markdown';
 import type { Engine } from '../sync/engine';
 import type { Snapshots } from '../sync/snapshots';
 import { parseNotes, pinnedNote, togglePin } from '../notes/notes';
 import { QUICK_NOTES_PATH, appendQuickNote } from '../notes/quickNotes';
 import { PROMPTS_PATH, markUsed, mergeBatches, newPromptFile, pickPrompt, promptComment, unusedPrompts, usedCount } from '../prompts/prompts';
 import { PROMPT_BATCHES } from '../prompts/starter';
-import { TRASH, cutsPathFor, isWithin, keyOf, notesPathFor, parentOf } from '../sync/paths';
+import { TRASH, baseName, cutsPathFor, isWithin, keyOf, notesPathFor, parentOf, stem } from '../sync/paths';
 import { EarlierVersions } from './EarlierVersions';
 import { EditorPane } from './EditorPane';
 import { ExportPdf } from './ExportPdf';
@@ -30,6 +32,8 @@ import { QuickCapture } from './QuickCapture';
 import { ShortcutsDialog } from './ShortcutsDialog';
 import { SprintDialog, type SprintState } from './Sprint';
 import { CutsDialog } from './CutsDialog';
+import { OutlinePanel } from './OutlinePanel';
+import { TemplatesDialog, type TemplateChoice } from './TemplatesDialog';
 import { SearchPane } from './SearchPane';
 import { WhatsNew } from './WhatsNew';
 import { ResizeHandle } from './ResizeHandle';
@@ -133,6 +137,9 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
   const [capturing, setCapturing] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showCuts, setShowCuts] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [outlineOpen, setOutlineOpen] = usePref('outline', false);
+  const [cursorAt, setCursorAt] = useState(0);
   const [reading, setReading] = useState<{ index: number; total: number; paused: boolean } | null>(null);
   const [showVersions, setShowVersions] = useState(false);
   const [sprint, setSprint] = useState<(SprintState & { key: string }) | null>(null);
@@ -311,6 +318,80 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
   const editorView = () => {
     const dom = document.querySelector<HTMLElement>('.cm-editor');
     return (dom && EditorView.findFromDOM(dom)) ?? null;
+  };
+
+  // ---- Banned words: your own list, underlined as a nudge ----
+  const [bannedOn, setBannedOn] = usePref('banned', false);
+  const bannedList = useMemo(() => (bannedOn ? parseBannedList(engine.get(keyOf(BANNED_PATH))?.text) : []), [bannedOn, engine, revision]);
+  /** Turns the nudge on, writing the starter list the first time. */
+  const toggleBanned = () => {
+    if (!bannedOn && engine.get(keyOf(BANNED_PATH)) === undefined) engine.writeFile(BANNED_PATH, STARTER_LIST);
+    setBannedOn(!bannedOn);
+  };
+  const openBannedList = () => {
+    const file = engine.get(keyOf(BANNED_PATH));
+    if (!file) {
+      engine.writeFile(BANNED_PATH, STARTER_LIST);
+      setTimeout(() => setSheetKey(keyOf(BANNED_PATH)), 50);
+    } else setSheetKey(file.key);
+    setPane('editor');
+  };
+
+  // ---- Templates: the sheets in a "Templates" group are starting points ----
+  const templates: TemplateChoice[] = useMemo(
+    () =>
+      engine
+        .all()
+        .filter((f) => f.kind === 'file' && isTemplate(f.path))
+        .map((f) => ({ key: f.key, name: stem(baseName(f.path)), text: f.text ?? '' }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [engine, revision],
+  );
+
+  /** Makes a sheet from a template (or a blank one) in the group you're in. */
+  const newFromTemplate = (template: TemplateChoice | null) => {
+    const folder = group?.path ?? lastGroup;
+    const created = engine.createSheet(folder);
+    if (template) {
+      const filled = fillIn(template.text, { date: new Date() });
+      engine.setText(created.key, filled);
+      // An empty "# " heading means the template wanted a title: start the cursor there.
+      const spot = filled.search(/^#{1,6} *$/m);
+      setTimeout(() => {
+        const view = editorView();
+        if (!view) return;
+        const at = spot === -1 ? filled.length : view.state.doc.lineAt(spot).to;
+        view.dispatch({ selection: { anchor: at }, scrollIntoView: true });
+        view.focus();
+      }, 80);
+    }
+    setShowTemplates(false);
+    openSheet(created.key);
+  };
+
+  /** Keeps this sheet as a starting point for later. */
+  const saveAsTemplate = () => {
+    if (sheet?.kind !== 'file') return;
+    askForName({
+      title: 'Save as template',
+      initial: library.sheets.get(sheet.key)?.title || 'Template',
+      action: 'Save',
+      onDone: (name) => {
+        const clean = safeFileName(name);
+        if (!clean) return;
+        if (!engine.get(keyOf(TEMPLATES_PATH))) engine.createGroup('', TEMPLATES_FOLDER);
+        engine.writeFile(`${TEMPLATES_PATH}/${clean}.md`, sheet.text ?? '');
+      },
+    });
+  };
+
+  /** Starts the Templates group off with one example, when there's nothing there yet. */
+  const openTemplates = () => {
+    if (templates.length === 0 && !engine.get(keyOf(TEMPLATES_PATH))) {
+      engine.createGroup('', TEMPLATES_FOLDER);
+      engine.writeFile(`${TEMPLATES_PATH}/Blank start.md`, STARTER_TEMPLATE);
+    }
+    setShowTemplates(true);
   };
 
   // ---- Cuts: text set aside from the sheet, kept beside it ----
@@ -549,6 +630,7 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
     group && group !== library.root
       ? [
           { label: 'Group notes', icon: 'paperclip', onSelect: () => setNotesTarget({ kind: 'group', key: group.key }) },
+          { label: 'New sheet from template…', icon: 'stack', onSelect: openTemplates },
           { label: 'New group inside…', icon: 'folder', onSelect: () => newGroup(group.path) },
           {
             label: 'Rename group…',
@@ -606,6 +688,7 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
           },
           { label: 'Export PDF…', onSelect: () => setExporting(true) },
           { label: 'Find and replace', onSelect: findInSheet },
+          { label: 'Save as template…', onSelect: saveAsTemplate },
           { label: 'Set aside', onSelect: setAside },
           { label: cutsCount ? `Cuts (${cutsCount})…` : 'Cuts…', onSelect: () => setShowCuts(true) },
           ...(canSpeak() ? [{ label: reading ? 'Stop reading' : 'Read to me', onSelect: () => (reading ? stopReading() : readAloud()) }] : []),
@@ -615,6 +698,8 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
           ...(layout === 'narrow' ? [] : [{ label: 'Focus mode', checked: focusMode, onSelect: () => setFocusMode(!focusMode) }]),
           ...typewriterItem,
           { label: activeSprint ? 'End sprint' : 'Sprint…', onSelect: toggleSprint },
+          { label: 'Banned words', checked: bannedOn, onSelect: toggleBanned },
+          ...(bannedOn ? [{ label: 'Edit the banned list…', onSelect: openBannedList }] : []),
           ...(touch ? [] : [{ label: 'Keyboard shortcuts', onSelect: () => setShowShortcuts(true) }]),
           'divider',
           {
@@ -793,8 +878,32 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
       notesCount={isPromptList ? -1 : sheetNotesCount}
       pinned={pinned && !isPromptList ? { title: pinned.title, body: pinned.body } : undefined}
       onUnpin={unpin}
+      banned={isPromptList ? [] : bannedList}
+      outlineOpen={outlineOpen}
+      onToggleOutline={() => {
+        setOutlineOpen(!outlineOpen);
+        if (!outlineOpen) setNotesTarget(null);
+      }}
+      onCursorChange={setCursorAt}
       notesOpen={notesTarget?.kind === 'sheet'}
       onToggleNotes={toggleSheetNotes}
+    />
+  );
+
+  const outlinePanel = outlineOpen && sheet?.kind === 'file' && !isPromptList && (
+    <OutlinePanel
+      text={sheet.text ?? ''}
+      readOnly={readOnly}
+      cursor={cursorAt}
+      onChange={(next) => engine.setText(sheet.key, next)}
+      onSetAside={(removed) => cutsPath && engine.writeFile(cutsPath, addCut(cutsText, removed, new Date()))}
+      onJump={(at) => {
+        const view = editorView();
+        if (!view) return;
+        view.dispatch({ selection: { anchor: at }, scrollIntoView: true });
+        view.focus();
+      }}
+      onClose={() => setOutlineOpen(false)}
     />
   );
 
@@ -827,7 +936,8 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
   // ---- Columns ----
   const showLibrary = layout === 'wide' && panes === 'all';
   const showList = !focusMode;
-  const showNotes = layout === 'wide' && Boolean(notesPanel);
+  const sidePanel = outlinePanel || notesPanel;
+  const showNotes = layout === 'wide' && Boolean(sidePanel);
   const columns =
     layout === 'narrow'
       ? 'minmax(0, 1fr)'
@@ -855,7 +965,9 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
       onTouchEnd={layout === 'narrow' ? onTouchEnd : undefined}
     >
       {layout === 'narrow' ? (
-        notesPanel && (notesTarget?.kind === 'group' || pane === 'editor') ? (
+        outlinePanel && pane === 'editor' ? (
+          outlinePanel
+        ) : notesPanel && (notesTarget?.kind === 'group' || pane === 'editor') ? (
           notesPanel
         ) : pane === 'library' ? (
           libraryPane
@@ -869,10 +981,17 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
           {showLibrary && column('library', 'right', libraryPane)}
           {showList && column('list', 'right', sheetList)}
           {editorPane}
-          {showNotes && column('notes', 'left', notesPanel)}
-          {layout === 'medium' && notesPanel && (
-            <div className="drawer-backdrop" onPointerDown={(e) => e.target === e.currentTarget && setNotesTarget(null)}>
-              <div className="drawer right">{notesPanel}</div>
+          {showNotes && column('notes', 'left', sidePanel)}
+          {layout === 'medium' && sidePanel && (
+            <div
+              className="drawer-backdrop"
+              onPointerDown={(e) => {
+                if (e.target !== e.currentTarget) return;
+                setNotesTarget(null);
+                setOutlineOpen(false);
+              }}
+            >
+              <div className="drawer right">{sidePanel}</div>
             </div>
           )}
           {layout === 'medium' && libraryOpen && (
@@ -903,6 +1022,18 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
       {sprintChoosing && <SprintDialog onStart={startSprint} onClose={() => setSprintChoosing(false)} />}
       {capturing && <QuickCapture onSave={saveQuickNote} onClose={() => setCapturing(false)} />}
       {showShortcuts && <ShortcutsDialog onClose={() => setShowShortcuts(false)} />}
+      {showTemplates && (
+        <TemplatesDialog
+          templates={templates}
+          destination={group ? group.name || 'the Inbox' : 'the Inbox'}
+          onPick={newFromTemplate}
+          onEdit={(key) => {
+            setShowTemplates(false);
+            openSheet(key);
+          }}
+          onClose={() => setShowTemplates(false)}
+        />
+      )}
       {showCuts && <CutsDialog text={cutsText} onPutBack={readOnly ? undefined : putCutBack} onDelete={deleteCut} onClose={() => setShowCuts(false)} />}
       {whatsNew && (
         <WhatsNew

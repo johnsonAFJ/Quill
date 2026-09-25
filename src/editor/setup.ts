@@ -8,6 +8,7 @@ import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, keymap, placeholder } from '@codemirror/view';
 import { tags as t } from '@lezer/highlight';
 import { bold, bulletList, insertLink, italic, quote, toggleComment, toggleHeading } from './formatting';
+import { bannedSlot } from './banned';
 import { findAndReplace } from './find';
 import { sectionFolding } from './folding';
 import { sprintSlot } from './sprint';
@@ -84,6 +85,7 @@ export function createEditorState(text: string, readOnly: boolean, listeners: Ex
       theme,
       typewriterSlot.of(typewriterOn ? typewriter : []),
       sprintSlot.of([]),
+      bannedSlot.of([]),
       listeners,
     ],
   });

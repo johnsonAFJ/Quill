@@ -3,6 +3,7 @@ import { foldEffect, unfoldEffect } from '@codemirror/language';
 import { EditorView } from '@codemirror/view';
 import { prefs } from '../app/device';
 import { foldedHeadings, refold } from './folding';
+import { bannedSlot, bannedWords } from './banned';
 import { sprint, sprintSlot } from './sprint';
 import { External, createEditorState } from './setup';
 import { typewriter, typewriterSlot } from './typewriter';
@@ -15,16 +16,18 @@ type Props = {
   readOnly: boolean;
   typewriterMode: boolean;
   sprintMode: boolean;
+  /** Words to underline as a nudge; empty when the nudge is off. */
+  banned: string[];
   onChange: (text: string) => void;
   onFocusChange: (focused: boolean) => void;
-  /** The selected text, or "" when nothing is selected. */
-  onSelectionChange: (selected: string) => void;
+  /** The selected text, or "" when nothing is selected, and where the cursor sits. */
+  onSelectionChange: (selected: string, cursor: number) => void;
   viewRef: RefObject<EditorView | null>;
 };
 
 type Folds = Record<string, string[]>;
 
-export function Editor({ sheetKey, foldKey, text, readOnly, typewriterMode, sprintMode, onChange, onFocusChange, onSelectionChange, viewRef }: Props) {
+export function Editor({ sheetKey, foldKey, text, readOnly, typewriterMode, sprintMode, banned, onChange, onFocusChange, onSelectionChange, viewRef }: Props) {
   const parent = useRef<HTMLDivElement>(null);
   // Latest callbacks, so the editor doesn't need rebuilding when they change.
   const callbacks = useRef({ onChange, onFocusChange, onSelectionChange, foldKey });
@@ -48,7 +51,7 @@ export function Editor({ sheetKey, foldKey, text, readOnly, typewriterMode, spri
         }
         if (update.selectionSet || update.docChanged) {
           const { from, to } = update.state.selection.main;
-          callbacks.current.onSelectionChange(update.state.sliceDoc(from, to));
+          callbacks.current.onSelectionChange(update.state.sliceDoc(from, to), update.state.selection.main.head);
         }
       }),
       typewriterMode,
@@ -80,6 +83,12 @@ export function Editor({ sheetKey, foldKey, text, readOnly, typewriterMode, spri
   useEffect(() => {
     viewRef.current?.dispatch({ effects: sprintSlot.reconfigure(sprintMode ? sprint : []) });
   }, [sprintMode, viewRef]);
+
+  // The list can change on another device, so follow it rather than reading it once.
+  const bannedKey = banned.join('\n');
+  useEffect(() => {
+    viewRef.current?.dispatch({ effects: bannedSlot.reconfigure(bannedWords(bannedKey ? bannedKey.split('\n') : [])) });
+  }, [bannedKey, viewRef]);
 
   // The text changed from outside (a sync brought a newer version): show it.
   useEffect(() => {

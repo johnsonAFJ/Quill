@@ -9,6 +9,11 @@ Newest first. Each "##" heading is one update. Quill shows the updates you haven
 - 👻 **Not in the mood?** Settings → Seasonal look → "Not this year" puts the costume away until next October, and "Off" retires seasons for good.
 - 🕸️ It packs itself away on November 1. Happy Halloween — go write something that makes the reader check the locks.
 
+## Sep 25 · Templates, outlines and banned words
+- **Start from a template:** a group's ••• menu now has **New sheet from template…**. Templates are ordinary sheets in a "Templates" group, so you write and edit them like anything else. Keep the sheet you're in as one with ••• → **Save as template…**. A template can hold `{{title}}`, `{{date}}`, `{{day}}` or `{{time}}`, filled in as the sheet is made.
+- **Outline (the button beside the paperclip):** your headings as a skeleton you can build before you write. Add a section, name it, press Tab to tuck it under the one above and Enter to start the next. Click a line to jump there, drag nothing — the arrows move a section, and its writing goes with it. Taking a section out sends its writing to Cuts, so nothing is lost. The outline *is* your headings, so the two can never disagree.
+- **Banned words (••• → Banned words):** the words you lean on get a quiet underline as you pass them, and a tally sits under the sheet: "very ×2 · just ×1". It never stops you typing or changes a word. Your list is a sheet you can edit (••• → Edit the banned list…), and Quill starts you off with the usual suspects.
+
 ## Sep 25 · A fourth PDF style: Ghost Story
 - **Export PDF → Ghost Story:** for something spooky. The uneven ink of a 1600s English press (IM Fell English, bundled with Quill), a small-caps title, a big first letter three lines deep, justified text, and page numbers between dashes at the foot.
 - No pictures and no decorations, just old type. It suits a ghost story, and it suits anything you want to feel older than it is.
