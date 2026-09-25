@@ -1,3 +1,5 @@
+import { prefs } from '../app/device';
+import { quoteOfDay, seasonNow, type SeasonChoice } from '../app/season';
 import type { Group, Library } from '../library/tree';
 import type { SyncStatus } from '../sync/engine';
 import { Icon, type IconName } from './icons';
@@ -60,6 +62,7 @@ export function LibraryPane({ library, selected, collapsed, status, recentCount,
           </p>
         )}
         <div className="library-spacer" />
+        <SeasonQuote />
         <Row icon="trash" label="Trash" count={trashCount} active={selected === TRASH_VIEW} onClick={() => onSelect(TRASH_VIEW)} />
       </div>
 
@@ -67,6 +70,20 @@ export function LibraryPane({ library, selected, collapsed, status, recentCount,
         <SyncLine status={status} />
       </footer>
     </nav>
+  );
+}
+
+/** While a season is on, one line a day from a book old enough to be out of copyright. */
+function SeasonQuote() {
+  const today = new Date();
+  const season = seasonNow(today, prefs.get<SeasonChoice>('season', 'auto'), prefs.get<string[]>('seasonsSkipped', []));
+  const quote = season && quoteOfDay(season, today);
+  if (!quote) return null;
+  return (
+    <figure className="season-quote">
+      <blockquote>“{quote.line}”</blockquote>
+      <figcaption>{quote.from}</figcaption>
+    </figure>
   );
 }
 

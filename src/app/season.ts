@@ -47,6 +47,50 @@ export function seasonNow(date: Date, choice: SeasonChoice, skipped: string[] = 
   return SEASONS.find((s) => inWindow(s, date) && !skipped.includes(skipMark(s, date))) ?? null;
 }
 
+/**
+ * A line a day, from books old enough to be out of copyright. They're quoted,
+ * not borrowed: each one is short and credited. Which one shows depends only
+ * on the date, so every device shows the same line on the same day.
+ */
+export type Quote = { line: string; from: string };
+
+export const QUOTES: Record<SeasonId, Quote[]> = {
+  halloween: [
+    { line: 'Deep into that darkness peering, long I stood there wondering, fearing.', from: 'Edgar Allan Poe, “The Raven”' },
+    { line: 'All that we see or seem is but a dream within a dream.', from: 'Edgar Allan Poe, “A Dream Within a Dream”' },
+    { line: 'It is the beating of his hideous heart!', from: 'Edgar Allan Poe, “The Tell-Tale Heart”' },
+    { line: 'The thousand injuries of Fortunato I had borne as I best could.', from: 'Edgar Allan Poe, “The Cask of Amontillado”' },
+    { line: 'Listen to them — the children of the night. What music they make!', from: 'Bram Stoker, Dracula' },
+    { line: 'Welcome to my house! Enter freely and of your own free will.', from: 'Bram Stoker, Dracula' },
+    { line: 'For the dead travel fast.', from: 'Bram Stoker, Dracula' },
+    { line: 'The blood is the life.', from: 'Bram Stoker, Dracula' },
+    { line: 'Beware; for I am fearless, and therefore powerful.', from: 'Mary Shelley, Frankenstein' },
+    { line: 'I ought to be thy Adam, but I am rather the fallen angel.', from: 'Mary Shelley, Frankenstein' },
+    { line: 'Nothing is so painful to the human mind as a great and sudden change.', from: 'Mary Shelley, Frankenstein' },
+    { line: 'By the pricking of my thumbs, something wicked this way comes.', from: 'William Shakespeare, Macbeth' },
+    { line: 'Double, double toil and trouble; fire burn and cauldron bubble.', from: 'William Shakespeare, Macbeth' },
+    { line: 'There are more things in heaven and earth, Horatio, than are dreamt of in your philosophy.', from: 'William Shakespeare, Hamlet' },
+    { line: 'Man is not truly one, but truly two.', from: 'Robert Louis Stevenson, Dr Jekyll and Mr Hyde' },
+    { line: 'If he be Mr. Hyde, I shall be Mr. Seek.', from: 'Robert Louis Stevenson, Dr Jekyll and Mr Hyde' },
+    { line: 'The dominant spirit that haunts this enchanted region is a figure on horseback without a head.', from: 'Washington Irving, “The Legend of Sleepy Hollow”' },
+    { line: 'You are mine, you shall be mine, you and I are one for ever.', from: 'Sheridan Le Fanu, Carmilla' },
+    { line: 'The story had held us, round the fire, sufficiently breathless.', from: 'Henry James, The Turn of the Screw' },
+    { line: 'I wear the chain I forged in life.', from: 'Charles Dickens, A Christmas Carol' },
+    { line: 'The oldest and strongest emotion of mankind is fear of the unknown.', from: 'H. P. Lovecraft, “Supernatural Horror in Literature”' },
+    { line: 'That is not dead which can eternal lie, and with strange aeons even death may die.', from: 'H. P. Lovecraft, “The Call of Cthulhu”' },
+    { line: 'Along the shore the cloud waves break, the twin suns sink behind the lake.', from: 'Robert W. Chambers, The King in Yellow' },
+    { line: 'The faint figure behind seemed to shake the pattern, just as if she wanted to get out.', from: 'Charlotte Perkins Gilman, “The Yellow Wallpaper”' },
+  ],
+};
+
+/** The quote for this day: the same one all day, a new one tomorrow. */
+export function quoteOfDay(season: Season, date: Date): Quote | null {
+  const quotes = QUOTES[season.id];
+  if (!quotes?.length) return null;
+  const days = Math.floor(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86_400_000);
+  return quotes[((days % quotes.length) + quotes.length) % quotes.length] ?? null;
+}
+
 /** Paints the frame, or puts it back to normal. */
 export function applySeason(season: Season | null): void {
   if (season) document.documentElement.dataset.season = season.id;
