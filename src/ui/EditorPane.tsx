@@ -158,9 +158,9 @@ export function EditorPane(props: Props) {
       )}
       {touch && typing && !readOnly && <FormatBar viewRef={viewRef} floating />}
       {tally.length > 0 && (
-        <p className="banned-tally" title="Words from your banned list (••• → Banned words)">
-          {tallyLabel(tally)}
-        </p>
+        <footer className="editor-foot" title="Words from your banned list (••• → Banned words)">
+          <span className="tally">{tallyLabel(tally)}</span>
+        </footer>
       )}
       {showWords && (
         <button className="word-count" onClick={onToggleWords} title="Hide word count">

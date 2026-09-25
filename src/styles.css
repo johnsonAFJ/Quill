@@ -643,15 +643,27 @@ button.danger {
   gap: 0.5rem;
 }
 
-.banned-tally {
-  position: absolute;
-  left: 1rem;
-  bottom: calc(env(safe-area-inset-bottom) + 0.6rem);
-  margin: 0;
-  font-size: 0.78rem;
+/* A quiet strip under the writing, so nothing ever sits on top of your words. */
+.editor-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 1rem calc(env(safe-area-inset-bottom) + 0.35rem);
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.editor-foot .tally {
   color: var(--danger);
-  opacity: 0.85;
-  pointer-events: none;
+  opacity: 0.8;
+}
+
+/* The word count floats above the strip rather than over it. */
+.editor-foot ~ .word-count {
+  bottom: calc(env(safe-area-inset-bottom) + 2.1rem);
 }
 
 .word-count {
