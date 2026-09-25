@@ -209,7 +209,18 @@ Checked in Chrome on the Mac with the real Dropbox: adding notes as cards, the p
 - Try Quill on real devices: iPhone keyboard toolbar, swipe back, a real two-device conflict, the final Save as PDF step, installing on the iPad.
 
 ### Ongoing
-- Seasonal themes, whenever one is wanted: Themes that switch on for a date window (e.g. Halloween, Oct 15–31) and back afterwards: colours plus small touches on the frame, never in the writing area, nothing moving. A Settings switch and a "Not this year" button.
+- Seasonal themes: **Halloween built 2026-09-25**, deliberately left out of `CHANGELOG.md` until release day so no "What's new" pop-up gives it away. It runs October 15 to November 1 (`SEASONS` in `src/app/season.ts`; change `from` to `[10, 1]` for an October 1 start). Settings → Seasonal look: "When it's time" (the default), "Show me now" (any day, for a look), "Off", and "Not this year" while one is showing. Only the frame changes: sidebar, list, lines, accents and a small 🎃 beside "Library"; the writing area keeps its own colours. More seasons go in the same list.
+
+  Release day: paste this at the top of `CHANGELOG.md`, with the date it goes live.
+
+  ```
+  ## Oct 15 · 🎃 Quill puts on a costume
+
+  - 🕯️ **Quill is dressed for Halloween.** The Library and the sheet list have gone candle-lit and pumpkin-dark for the rest of October. Your writing area is untouched: same paper, same ink, not a cobweb on your words.
+  - 🦇 **Nothing moves, nothing flickers, nothing jumps out at you.** It's a change of light, not a haunted house.
+  - 👻 **Not in the mood?** Settings → Seasonal look → "Not this year" puts the costume away until next October, and "Off" retires seasons for good. "Show me now" brings it back any day of the year.
+  - 🕸️ It packs itself away on November 1. Happy Halloween — go write something that makes the reader check the locks.
+  ```
 - More PDF styles, added one at a time.
 
 ### Future ideas

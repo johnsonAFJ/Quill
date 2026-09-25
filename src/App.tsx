@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { applyTheme, deviceName, prefs, type Theme } from './app/device';
+import { applySeason, seasonNow, type SeasonChoice } from './app/season';
 import { describeError, disconnect, dropboxClient, finishSignInIfReturning, isConnected, startSignIn } from './dropbox/connection';
 import { DeviceStore } from './sync/deviceStore';
 import { DropboxRemote } from './sync/dropboxRemote';
@@ -16,6 +17,7 @@ export function App() {
 
   useEffect(() => {
     applyTheme(prefs.get<Theme>('theme', 'auto'));
+    applySeason(seasonNow(new Date(), prefs.get<SeasonChoice>('season', 'auto'), prefs.get<string[]>('seasonsSkipped', [])));
     (async () => {
       try {
         const signInError = await finishSignInIfReturning();

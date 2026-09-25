@@ -71,6 +71,57 @@
   }
 }
 
+/* ---- Seasons: the frame only, never the writing area (see src/app/season.ts) ---- */
+
+/* Halloween: candle-lit pumpkin and a little aubergine in the sidebars. */
+:root[data-season='halloween'] {
+  --sidebar: #f4ecf1;
+  --list: #faf4f3;
+  --line: #e6d8dd;
+  --hover: #eee0e4;
+  --active: #e6d3d8;
+  --accent: #c2531b;
+  --accent-text: #ffffff;
+  --selection: #f7dcc4;
+  --notice: #f7e8d8;
+  --muted: #8b7d82;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-season='halloween']:not([data-theme='light']) {
+    --sidebar: #1f1620;
+    --list: #1c141a;
+    --line: #3a2b36;
+    --hover: #2b1f29;
+    --active: #3a2a35;
+    --accent: #f0903f;
+    --accent-text: #1a1116;
+    --selection: #5d3620;
+    --notice: #2c1e26;
+    --muted: #978a90;
+  }
+}
+
+:root[data-season='halloween'][data-theme='dark'] {
+  --sidebar: #1f1620;
+  --list: #1c141a;
+  --line: #3a2b36;
+  --hover: #2b1f29;
+  --active: #3a2a35;
+  --accent: #f0903f;
+  --accent-text: #1a1116;
+  --selection: #5d3620;
+  --notice: #2c1e26;
+  --muted: #978a90;
+}
+
+/* One small carved pumpkin beside "Library". It sits still. */
+:root[data-season='halloween'] .library-pane .pane-header h1::after {
+  content: ' 🎃';
+  font-size: 0.75em;
+}
+
+
 * {
   box-sizing: border-box;
 }
