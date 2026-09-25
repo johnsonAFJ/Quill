@@ -10,8 +10,9 @@ export const ALL_VIEW = '__all';
 export const RECENT_VIEW = '__recent';
 export const PROMPTS_VIEW = '__prompts';
 export const SEARCH_VIEW = '__search';
+export const LOG_VIEW = '__log';
 /** Library rows that aren't a group (folder) of their own. */
-export const SPECIAL_VIEWS = [TRASH_VIEW, ALL_VIEW, RECENT_VIEW, PROMPTS_VIEW, SEARCH_VIEW];
+export const SPECIAL_VIEWS = [TRASH_VIEW, ALL_VIEW, RECENT_VIEW, PROMPTS_VIEW, SEARCH_VIEW, LOG_VIEW];
 
 type Props = {
   library: Library;
@@ -52,6 +53,7 @@ export function LibraryPane({ library, selected, collapsed, status, recentCount,
         <Row icon="stack" label="All" count={library.sheets.size} active={selected === ALL_VIEW} onClick={() => onSelect(ALL_VIEW)} />
         <Row icon="clock" label="Last 7 Days" count={recentCount} active={selected === RECENT_VIEW} onClick={() => onSelect(RECENT_VIEW)} />
         <Row icon="sparkle" label="Prompts" count={promptsLeft ?? 0} active={selected === PROMPTS_VIEW} onClick={() => onSelect(PROMPTS_VIEW)} />
+        <Row icon="calendar" label="Writing log" active={selected === LOG_VIEW} onClick={() => onSelect(LOG_VIEW)} />
         {library.root.groups.length > 0 && <div className="section-label">Groups</div>}
         {sortGroups(library.root.groups).map((g) => (
           <GroupRow key={g.key} group={g} depth={0} selected={selected} collapsed={collapsed} onSelect={onSelect} onToggle={onToggle} />
@@ -91,7 +93,7 @@ function sortGroups(groups: Group[]): Group[] {
   return [...groups].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
 }
 
-function Row({ icon, label, count, active, onClick }: { icon: IconName; label: string; count: number; active: boolean; onClick: () => void }) {
+function Row({ icon, label, count = 0, active, onClick }: { icon: IconName; label: string; count?: number; active: boolean; onClick: () => void }) {
   return (
     <button className={`library-row${active ? ' active' : ''}`} onClick={onClick}>
       <span className="row-lead" />

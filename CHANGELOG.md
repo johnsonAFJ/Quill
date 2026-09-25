@@ -9,6 +9,12 @@ Newest first. Each "##" heading is one update. Quill shows the updates you haven
 - 👻 **Not in the mood?** Settings → Seasonal look → "Not this year" puts the costume away until next October, and "Off" retires seasons for good.
 - 🕸️ It packs itself away on November 1. Happy Halloween — go write something that makes the reader check the locks.
 
+## Sep 25 · A quiet writing log
+- **Writing log**, in the Library under Prompts: a month at a time, each day a square that's darker the more you wrote. Flip back through earlier months with the arrows, and tap a day to see the words written, what you cut, your sprints and which sheets you worked in.
+- It counts the words **you add as you type**, not your net total, so a day of cutting and revising never looks like a bad day. Changes Quill makes for you (templates, the outline, anything arriving from another device) don't count.
+- Every device keeps its own record and the calendar adds them together, so a morning on the phone and an evening on the Mac make one day.
+- No streaks, no goals, no reminders. It starts from today.
+
 ## Sep 25 · One quiet strip under the writing
 - The **word count and the banned-word tally now share a slim strip** beneath the sheet: what you overused on the left, how much you wrote on the right. Neither floats over your words any more. Clicking the count still puts it away, and the strip disappears when there's nothing to say.
 

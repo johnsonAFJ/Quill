@@ -40,3 +40,16 @@ export function applyTheme(theme: Theme): void {
   if (theme === 'auto') delete document.documentElement.dataset.theme;
   else document.documentElement.dataset.theme = theme;
 }
+
+/**
+ * A lasting name for this device, made up once, for files that belong to one
+ * device only (the writing log). Never shown, never tied to you.
+ */
+export function deviceId(): string {
+  let id = prefs.get<string | null>('deviceId', null);
+  if (!id) {
+    id = `${deviceName().toLowerCase()}-${Math.random().toString(36).slice(2, 10)}`;
+    prefs.set('deviceId', id);
+  }
+  return id;
+}

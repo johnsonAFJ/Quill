@@ -11,10 +11,11 @@ import { addCut, parseCuts, removeCut } from '../cuts/cuts';
 import { BANNED_PATH, STARTER_LIST, parseBannedList } from '../text/banned';
 import { STARTER_TEMPLATE, TEMPLATES_FOLDER, TEMPLATES_PATH, fillIn, isTemplate } from '../templates/templates';
 import { Reader, canSpeak, pieceAt, piecesOf } from '../speech/speech';
-import { isTouch, prefs } from '../app/device';
+import { deviceId, isTouch, prefs } from '../app/device';
+import { LOG_FOLDER, mergeLogs, parseLog, recordSprint, recordWords, serializeLog, type Log } from '../log/log';
 import { search, whereOf, type SearchHit } from '../library/search';
 import { buildLibrary, sortSheets, type SortOrder } from '../library/tree';
-import { safeFileName, wordCount } from '../text/markdown';
+import { safeFileName, titleOf, wordCount } from '../text/markdown';
 import type { Engine } from '../sync/engine';
 import type { Snapshots } from '../sync/snapshots';
 import { parseNotes, pinnedNote, togglePin } from '../notes/notes';
@@ -25,7 +26,8 @@ import { TRASH, baseName, cutsPathFor, isWithin, keyOf, notesPathFor, parentOf, 
 import { EarlierVersions } from './EarlierVersions';
 import { EditorPane } from './EditorPane';
 import { ExportPdf } from './ExportPdf';
-import { ALL_VIEW, INBOX, LibraryPane, PROMPTS_VIEW, RECENT_VIEW, SEARCH_VIEW, SPECIAL_VIEWS, TRASH_VIEW } from './LibraryPane';
+import { ALL_VIEW, INBOX, LOG_VIEW, LibraryPane, PROMPTS_VIEW, RECENT_VIEW, SEARCH_VIEW, SPECIAL_VIEWS, TRASH_VIEW } from './LibraryPane';
+import { WritingLogPane } from './WritingLogPane';
 import { NotesPanel } from './NotesPanel';
 import { PromptsPane } from './PromptsPane';
 import { QuickCapture } from './QuickCapture';
@@ -273,8 +275,43 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
     syncTimer.current = setTimeout(() => void engine.sync(), error ? SYNC_RETRY_MS : SYNC_AFTER_CHANGE_MS);
   }, [engine, revision]);
 
+  // ---- The writing log: words you add as you type, kept per device ----
+  const logPath = `${LOG_FOLDER}/${deviceId()}.json`;
+  const myLog = useRef<Log | null>(null);
+  const logSave = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveLog = useCallback(() => {
+    if (logSave.current) clearTimeout(logSave.current);
+    logSave.current = null;
+    if (myLog.current) engine.writeFile(logPath, serializeLog(myLog.current));
+  }, [engine, logPath]);
+  /** Read this device's log the first time it's needed (after Dropbox has loaded), then keep it in hand. */
+  const updateLog = (change: (log: Log) => Log) => {
+    myLog.current = change(myLog.current ?? parseLog(engine.get(keyOf(logPath))?.text));
+    if (logSave.current) clearTimeout(logSave.current);
+    logSave.current = setTimeout(saveLog, 8000);
+  };
+  // Leaving the app, or switching away from it, writes the log straight away.
+  useEffect(() => {
+    const hide = () => document.visibilityState === 'hidden' && saveLog();
+    document.addEventListener('visibilitychange', hide);
+    window.addEventListener('pagehide', saveLog);
+    return () => {
+      document.removeEventListener('visibilitychange', hide);
+      window.removeEventListener('pagehide', saveLog);
+    };
+  }, [saveLog]);
+
+  /** Your own typing. Changes Quill makes for you (templates, the outline, Dropbox) come in elsewhere and aren't logged. */
   const onChange = (text: string) => {
-    if (currentKey && !readOnly) engine.setText(currentKey, text);
+    if (!currentKey || readOnly) return;
+    const before = engine.get(currentKey)?.text ?? '';
+    engine.setText(currentKey, text);
+    const change = wordCount(text) - wordCount(before);
+    if (change !== 0 && !isPromptList) {
+      const file = engine.get(currentKey);
+      const title = library.sheets.get(currentKey)?.title || titleOf(text) || 'Untitled';
+      if (file) updateLog((log) => recordWords(log, new Date(), { id: file.id, title }, change));
+    }
   };
 
   // ---- Navigation ----
@@ -338,6 +375,12 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
     } else setSheetKey(file.key);
     setPane('editor');
   };
+
+  const logFiles = useMemo(
+    () => engine.all().filter((f) => f.kind === 'file' && isWithin(f.path, LOG_FOLDER) && keyOf(f.path) !== keyOf(logPath)),
+    [engine, revision, logPath],
+  );
+  const writingLog = () => mergeLogs([...logFiles.map((f) => parseLog(f.text)), myLog.current ?? parseLog(engine.get(keyOf(logPath))?.text)]);
 
   // ---- Templates: the sheets in a "Templates" group are starting points ----
   const templates: TemplateChoice[] = useMemo(
@@ -546,10 +589,13 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
     setSprintResult(null);
     setTimeout(() => document.querySelector<HTMLElement>('.cm-content')?.focus(), 50);
   };
+  const updateLogRef = useRef(updateLog);
+  updateLogRef.current = updateLog;
   const endSprint = useCallback(
     (timeUp: boolean) => {
       setSprint((running) => {
         if (running) {
+          updateLogRef.current((log) => recordSprint(log, new Date()));
           const file = engine.get(running.key);
           const written = Math.max(0, wordCount(file?.text ?? '') - running.startWords);
           const minutes = Math.max(1, Math.round((Date.now() - running.startedAt) / 60_000));
@@ -818,6 +864,8 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
         onOpenList={openPromptList}
         onBack={backToLibrary}
       />
+    ) : groupKey === LOG_VIEW ? (
+      <WritingLogPane log={writingLog()} onBack={backToLibrary} />
     ) : groupKey === SEARCH_VIEW ? (
       <SearchPane query={query} hits={hits} onQuery={setQuery} onOpen={openHit} onBack={backToLibrary} onClose={toggleSearch} />
     ) : null;

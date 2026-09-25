@@ -35,6 +35,8 @@ export function App() {
         const store = new DeviceStore();
         const engine = new Engine(store, new DropboxRemote(dropboxClient()), deviceName());
         await engine.load();
+        // The test copy only (npm run dev): a handle for checking things by hand. Never in the published app.
+        if (import.meta.env.DEV) (window as unknown as { quill: unknown }).quill = { engine };
         setStatus({ state: 'ready', engine, store, snapshots: new Snapshots(store) });
       } catch (err) {
         setStatus({ state: 'signedOut', message: describeError(err) });
