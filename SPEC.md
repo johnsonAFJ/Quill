@@ -201,6 +201,10 @@ Checked in Chrome on the Mac with the real Dropbox: adding notes as cards, the p
 6. **Sprint mode:** everything before the sentence being typed is locked (no clicking or arrowing back into it; backspace stops at the sentence start; the lock only moves forward) and fades, an optional timer (10/15/25 min) and a count of words written in the sprint. Esc or the same shortcut ends it.
 7. **Delete permanently:** a Delete button on items in the Trash view, with a confirmation. Quill only ever deletes from Trash, and only when you choose Delete; Dropbox keeps deleted files for 30 more days.
 
+### Phase 5: Cuts and reading aloud (built 2026-09-24)
+1. **Set aside (⌘⇧X, or ••• → Set aside):** moves the selection, or the paragraph the cursor is in, out of the sheet and into a cuts file beside it (`The Lighthouse.cuts.md`), newest first under a "## date and time" heading. Hidden from the Library, it follows the sheet when it's renamed or trashed, and it never touches the clipboard. ••• → Cuts lists them with word counts; "Put back here" drops one in at the cursor as its own paragraph and takes it off the list; Delete asks first.
+2. **Read to me (••• → Read to me):** the device's own voice (the browser's speech synthesis, offline, no account) reads from the cursor, or just the selection. Comments and Markdown symbols are left unsaid, the text is read in sentence-sized pieces (some browsers give up on long ones), and a bar shows "3 of 12" with Pause and Stop. Esc stops; leaving the sheet stops. The menu item is hidden where the browser can't speak.
+
 ### Next up
 - Try Quill on real devices: iPhone keyboard toolbar, swipe back, a real two-device conflict, the final Save as PDF step, installing on the iPad.
 

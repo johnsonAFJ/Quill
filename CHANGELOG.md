@@ -2,6 +2,11 @@
 
 Newest first. Each "##" heading is one update. Quill shows the updates you haven't seen yet, once per device, the first time you open it after an update.
 
+## Sep 24 · Cuts, and Quill reads to you
+- **Set aside (⌘⇧X,** or ••• → Set aside): takes the part you're not sure about out of the sheet and keeps it in **Cuts**, beside the sheet in Dropbox. With nothing selected it sets aside the paragraph you're in. Your clipboard is left alone.
+- **••• → Cuts** lists everything you've set aside, newest first, with the date and word count. **Put back here** drops a piece in at your cursor as its own paragraph; **Delete** asks first. Cuts never count towards your words, and they follow the sheet if you rename or trash it.
+- **••• → Read to me:** your device reads the sheet aloud in its own voice, starting at your cursor (or just the part you've selected). A bar shows how far along it is, with Pause and Stop; Esc stops it. Comments aren't read out. Nothing is sent anywhere, and it works offline.
+
 ## Sep 22 · Tidier sheet list
 - The paperclip on a sheet with notes now sits beside its name instead of on its own line. Long names trim with "…" and the paperclip stays put.
 

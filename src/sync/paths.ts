@@ -25,6 +25,16 @@ export function notesPathFor(sheetPath: string): string {
   return sheetPath.replace(/\.md$/i, '') + '.notes.md';
 }
 
+/** The cuts file that belongs to a sheet: pieces set aside from it. */
+export function cutsPathFor(sheetPath: string): string {
+  return sheetPath.replace(/\.md$/i, '') + '.cuts.md';
+}
+
+/** The hidden files that travel with a sheet wherever it goes. */
+export function companionsOf(sheetPath: string): string[] {
+  return [notesPathFor(sheetPath), cutsPathFor(sheetPath)];
+}
+
 /** True if `path` is `folder` itself or anything inside it. */
 export function isWithin(path: string, folder: string): boolean {
   const p = keyOf(path);

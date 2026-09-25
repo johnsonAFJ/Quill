@@ -1270,3 +1270,57 @@ button.danger {
 .sprint-bar button {
   margin-left: auto;
 }
+
+.reading-bar button + button {
+  margin-left: 0.25rem;
+}
+
+.cut-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+}
+
+.cut-list li + li {
+  border-top: 1px solid var(--line);
+}
+
+.cut-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: var(--text);
+  padding: 0.5rem 0.6rem;
+  border-radius: 8px;
+}
+
+.cut-list li.open .cut-head {
+  font-weight: 600;
+}
+
+.cut-head small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  margin-left: auto;
+}
+
+.cut-text {
+  margin: 0 0.6rem;
+  padding: 0.6rem 0.75rem;
+  max-height: 40vh;
+  overflow: auto;
+  background: var(--hover);
+  border-radius: 8px;
+  font: 0.95rem/1.5 var(--writing-font);
+  white-space: pre-wrap;
+}
+
+.cut-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 0.6rem 0.75rem;
+}

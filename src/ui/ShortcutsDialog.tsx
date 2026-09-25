@@ -21,6 +21,7 @@ const GROUPS: { title: string; keys: [string, string][] }[] = [
       ['⌘Z  ⌘⇧Z', 'Undo, redo'],
       ['⌘⇧F', 'Just the text (hide the sidebars)'],
       ['⌥⌘S', 'Start or end a sprint'],
+      ['⌘⇧X', 'Set aside the selection (or this paragraph) in Cuts'],
       ['⌥⌘[  ⌥⌘]', 'Fold or show the section you’re in'],
     ],
   },

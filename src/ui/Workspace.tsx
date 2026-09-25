@@ -7,6 +7,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { openSearchPanel } from '@codemirror/search';
 import { EditorView } from '@codemirror/view';
 import { markUpdatesSeen, unseenUpdates, updates } from '../app/changelog';
+import { addCut, parseCuts, removeCut } from '../cuts/cuts';
+import { Reader, canSpeak, pieceAt, piecesOf } from '../speech/speech';
 import { isTouch, prefs } from '../app/device';
 import { search, whereOf, type SearchHit } from '../library/search';
 import { buildLibrary, sortSheets, type SortOrder } from '../library/tree';
@@ -17,7 +19,7 @@ import { parseNotes, pinnedNote, togglePin } from '../notes/notes';
 import { QUICK_NOTES_PATH, appendQuickNote } from '../notes/quickNotes';
 import { PROMPTS_PATH, markUsed, mergeBatches, newPromptFile, pickPrompt, promptComment, unusedPrompts, usedCount } from '../prompts/prompts';
 import { PROMPT_BATCHES } from '../prompts/starter';
-import { TRASH, isWithin, keyOf, notesPathFor, parentOf } from '../sync/paths';
+import { TRASH, cutsPathFor, isWithin, keyOf, notesPathFor, parentOf } from '../sync/paths';
 import { EarlierVersions } from './EarlierVersions';
 import { EditorPane } from './EditorPane';
 import { ExportPdf } from './ExportPdf';
@@ -27,6 +29,7 @@ import { PromptsPane } from './PromptsPane';
 import { QuickCapture } from './QuickCapture';
 import { ShortcutsDialog } from './ShortcutsDialog';
 import { SprintDialog, type SprintState } from './Sprint';
+import { CutsDialog } from './CutsDialog';
 import { SearchPane } from './SearchPane';
 import { WhatsNew } from './WhatsNew';
 import { ResizeHandle } from './ResizeHandle';
@@ -129,6 +132,8 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
   const [exporting, setExporting] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showCuts, setShowCuts] = useState(false);
+  const [reading, setReading] = useState<{ index: number; total: number; paused: boolean } | null>(null);
   const [showVersions, setShowVersions] = useState(false);
   const [sprint, setSprint] = useState<(SprintState & { key: string }) | null>(null);
   const [sprintChoosing, setSprintChoosing] = useState(false);
@@ -298,9 +303,85 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
 
   /** ⌘F: the find and replace bar in the open sheet. */
   const findInSheet = () => {
-    const dom = document.querySelector<HTMLElement>('.cm-editor');
-    const view = dom && EditorView.findFromDOM(dom);
+    const view = editorView();
     if (view) openSearchPanel(view);
+  };
+
+  /** The open sheet's editor, for reading it out loud and moving text in and out. */
+  const editorView = () => {
+    const dom = document.querySelector<HTMLElement>('.cm-editor');
+    return (dom && EditorView.findFromDOM(dom)) ?? null;
+  };
+
+  // ---- Cuts: text set aside from the sheet, kept beside it ----
+  const cutsPath = sheet?.kind === 'file' ? cutsPathFor(sheet.path) : null;
+  const cutsText = cutsPath ? (engine.get(keyOf(cutsPath))?.text ?? '') : '';
+  const cutsCount = cutsText ? parseCuts(cutsText).length : 0;
+
+  /** Moves the selection (or the paragraph you're in) out of the sheet and into its cuts file. */
+  const setAside = () => {
+    const view = editorView();
+    if (!view || !cutsPath || readOnly) return;
+    const sel = view.state.selection.main;
+    const line = view.state.doc.lineAt(sel.head);
+    const from = sel.empty ? line.from : sel.from;
+    let to = sel.empty ? line.to : sel.to;
+    const piece = view.state.sliceDoc(from, to);
+    if (!piece.trim()) return;
+    // Take the blank line after a whole paragraph too, so no gap is left behind.
+    if (sel.empty) {
+      const after = view.state.sliceDoc(to, Math.min(to + 2, view.state.doc.length));
+      to += after.startsWith('\n\n') ? 2 : after.startsWith('\n') ? 1 : 0;
+    }
+    view.dispatch({ changes: { from, to, insert: '' }, selection: { anchor: from }, userEvent: 'delete.cut' });
+    view.focus();
+    engine.writeFile(cutsPath, addCut(cutsText, piece, new Date()));
+  };
+
+  /** Drops a cut back in at the cursor and takes it off the list. */
+  const putCutBack = (index: number) => {
+    const view = editorView();
+    if (!view || !cutsPath || readOnly) return;
+    const cut = parseCuts(cutsText).find((c) => c.index === index);
+    if (!cut) return;
+    const at = view.state.selection.main.head;
+    const doc = view.state.doc;
+    const line = doc.lineAt(at);
+    // The piece always lands as its own paragraph, with one blank line each side.
+    const blank = line.text.trim() === '';
+    const before = blank ? (line.number > 1 ? '\n' : '') : '\n\n';
+    const after = blank ? (line.number < doc.lines ? '\n' : '') : at < line.to ? '\n\n' : '';
+    const insert = `${before}${cut.text}${after}`;
+    view.dispatch({ changes: { from: at, insert }, selection: { anchor: at + insert.length }, userEvent: 'input.paste' });
+    view.focus();
+    engine.writeFile(cutsPath, removeCut(cutsText, index));
+    setShowCuts(false);
+  };
+
+  const deleteCut = (index: number, words: number) => {
+    if (!cutsPath) return;
+    if (!confirm(`Delete this cut of ${words} word${words === 1 ? '' : 's'} for good? It can't be put back afterwards.`)) return;
+    engine.writeFile(cutsPath, removeCut(cutsText, index));
+  };
+
+  // ---- Reading out loud ----
+  const readerRef = useRef<Reader | null>(null);
+  const reader = () => {
+    readerRef.current ??= new Reader((state) => setReading(state.speaking ? { index: state.index, total: state.total, paused: state.paused } : null));
+    return readerRef.current;
+  };
+  const stopReading = useCallback(() => readerRef.current?.stop(), []);
+  /** Reads the sheet aloud from the cursor, or just the selection if you made one. */
+  const readAloud = () => {
+    const view = editorView();
+    if (!view) return;
+    const sel = view.state.selection.main;
+    if (sel.empty) {
+      const pieces = piecesOf(view.state.doc.toString());
+      reader().start(pieces, pieceAt(pieces, sel.head));
+    } else {
+      reader().start(piecesOf(view.state.sliceDoc(sel.from, sel.to)));
+    }
   };
 
   const openPromptList = () => {
@@ -402,6 +483,8 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
     if (hadSheet.current && !currentKey && savedPanes !== 'all') setPanes('all');
     hadSheet.current = Boolean(currentKey);
   }, [currentKey, savedPanes, setPanes]);
+  // Reading stops when you leave the sheet, and when Quill closes.
+  useEffect(() => stopReading, [currentKey, stopReading]);
   // Leaving the sheet ends its sprint.
   useEffect(() => {
     if (sprint && sprint.key !== currentKey) endSprint(false);
@@ -420,8 +503,8 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
 
   // The shortcut handler below is set up once; this keeps it using the latest versions.
   const toggleSprint = () => (activeSprint ? endSprint(false) : currentKey && !readOnly && setSprintChoosing(true));
-  const shortcuts = useRef({ newInboxSheet, toggleSprint, toggleSearch, findInSheet, sprinting: Boolean(activeSprint) });
-  shortcuts.current = { newInboxSheet, toggleSprint, toggleSearch, findInSheet, sprinting: Boolean(activeSprint) };
+  const shortcuts = useRef({ newInboxSheet, toggleSprint, toggleSearch, findInSheet, setAside, stopReading, sprinting: Boolean(activeSprint), reading: Boolean(reading) });
+  shortcuts.current = { newInboxSheet, toggleSprint, toggleSearch, findInSheet, setAside, stopReading, sprinting: Boolean(activeSprint), reading: Boolean(reading) };
 
   // ⌘⇧F focus mode, ⌘F search, ⌘⇧J quick note, ⌥⌘N new Inbox sheet.
   useEffect(() => {
@@ -429,8 +512,9 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
       // Already handled by the editor (like ⌘F or Esc in the find bar).
       if (e.defaultPrevented) return;
       const mod = e.metaKey || e.ctrlKey;
-      if (e.key === 'Escape' && shortcuts.current.sprinting && !document.querySelector('.dialog')) {
-        endSprint(false);
+      if (e.key === 'Escape' && !document.querySelector('.dialog') && (shortcuts.current.reading || shortcuts.current.sprinting)) {
+        if (shortcuts.current.reading) shortcuts.current.stopReading();
+        if (shortcuts.current.sprinting) endSprint(false);
       } else if (mod && e.altKey && e.code === 'KeyS') {
         e.preventDefault();
         shortcuts.current.toggleSprint();
@@ -443,6 +527,9 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
       } else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'f') {
         e.preventDefault();
         if (currentKey || focusMode) setPanes(focusMode ? 'all' : 'editor');
+      } else if (mod && e.shiftKey && e.code === 'KeyX') {
+        e.preventDefault();
+        shortcuts.current.setAside();
       } else if (mod && e.altKey && e.code === 'KeyF') {
         e.preventDefault();
         shortcuts.current.toggleSearch();
@@ -500,6 +587,7 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
           { label: 'Put back', icon: 'restore', onSelect: () => setSheetKey(engine.restore(sheet.key)) },
           { label: 'Delete permanently…', icon: 'trash', danger: true, onSelect: () => deleteForGood(sheet.key, library.sheets.get(sheet.key)?.title ?? library.trash.find((s) => s.key === sheet.key)?.title ?? '') },
           { label: 'Export PDF…', onSelect: () => setExporting(true) },
+          ...(canSpeak() ? [{ label: reading ? 'Stop reading' : 'Read to me', onSelect: () => (reading ? stopReading() : readAloud()) }] : []),
           { label: 'Word count', checked: showWords, onSelect: () => setShowWords(!showWords) },
         ]
       : [
@@ -518,6 +606,9 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
           },
           { label: 'Export PDF…', onSelect: () => setExporting(true) },
           { label: 'Find and replace', onSelect: findInSheet },
+          { label: 'Set aside', onSelect: setAside },
+          { label: cutsCount ? `Cuts (${cutsCount})…` : 'Cuts…', onSelect: () => setShowCuts(true) },
+          ...(canSpeak() ? [{ label: reading ? 'Stop reading' : 'Read to me', onSelect: () => (reading ? stopReading() : readAloud()) }] : []),
           { label: 'Earlier versions…', onSelect: () => setShowVersions(true) },
           'divider',
           { label: 'Word count', checked: showWords, onSelect: () => setShowWords(!showWords) },
@@ -537,6 +628,23 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
             },
           },
         ];
+
+  // ---- Bars above the writing ----
+  const readingBar = reading ? (
+    <div className="sprint-bar reading-bar" role="status">
+      <span>Reading aloud</span>
+      <span className="muted">·</span>
+      <span>
+        {Math.min(reading.index + 1, reading.total)} of {reading.total}
+      </span>
+      <button className="quiet small" onClick={() => (reading.paused ? readerRef.current?.resume() : readerRef.current?.pause())}>
+        {reading.paused ? 'Carry on' : 'Pause'}
+      </button>
+      <button className="quiet small" onClick={stopReading}>
+        Stop
+      </button>
+    </div>
+  ) : null;
 
   // ---- Conflict banners ----
   let banner: ReactNode = sprintResult ? (
@@ -668,7 +776,16 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
       sprint={activeSprint}
       onEndSprint={endSprint}
       menu={sheetMenu}
-      banner={banner}
+      banner={
+        readingBar ? (
+          <>
+            {readingBar}
+            {banner}
+          </>
+        ) : (
+          banner
+        )
+      }
       onChange={onChange}
       onBack={layout === 'narrow' ? backToSheets : undefined}
       onToggleFocus={layout === 'narrow' ? undefined : cyclePanes}
@@ -786,6 +903,7 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
       {sprintChoosing && <SprintDialog onStart={startSprint} onClose={() => setSprintChoosing(false)} />}
       {capturing && <QuickCapture onSave={saveQuickNote} onClose={() => setCapturing(false)} />}
       {showShortcuts && <ShortcutsDialog onClose={() => setShowShortcuts(false)} />}
+      {showCuts && <CutsDialog text={cutsText} onPutBack={readOnly ? undefined : putCutBack} onDelete={deleteCut} onClose={() => setShowCuts(false)} />}
       {whatsNew && (
         <WhatsNew
           updates={whatsNew.all ? updates : unseenUpdates()}

@@ -47,8 +47,10 @@ const GROUP_NOTES = '_notes.md';
 /** The prompt list (see src/prompts). It opens from "Prompts" in the Library, not as a sheet. */
 const PROMPT_LIST = '_prompts.md';
 const SHEET_NOTES_SUFFIX = '.notes.md';
+/** Pieces set aside from a sheet (see src/cuts). Hidden, like notes. */
+const SHEET_CUTS_SUFFIX = '.cuts.md';
 
-type Role = 'group' | 'trash' | 'hidden' | 'sheet' | 'sheetNotes' | 'groupNotes' | 'other';
+type Role = 'group' | 'trash' | 'hidden' | 'sheet' | 'sheetNotes' | 'sheetCuts' | 'groupNotes' | 'other';
 
 /** What a single file or folder name means to the Library. */
 export function roleOf(name: string, kind: Entry['kind']): Role {
@@ -60,6 +62,7 @@ export function roleOf(name: string, kind: Entry['kind']): Role {
   if (lower === GROUP_NOTES) return 'groupNotes';
   if (lower === PROMPT_LIST) return 'other';
   if (lower.endsWith(SHEET_NOTES_SUFFIX)) return 'sheetNotes';
+  if (lower.endsWith(SHEET_CUTS_SUFFIX)) return 'sheetCuts';
   if (lower.endsWith('.md')) return 'sheet';
   return 'other';
 }

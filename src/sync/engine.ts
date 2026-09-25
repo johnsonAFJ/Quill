@@ -7,7 +7,7 @@
 // this device hasn't seen: a mismatch becomes a conflict copy instead.
 
 import { titleOf, safeFileName, untitledName } from '../text/markdown';
-import { BACKUPS, TRASH, baseName, isWithin, join, keyOf, notesPathFor, parentOf, stem } from './paths';
+import { BACKUPS, TRASH, baseName, companionsOf, isWithin, join, keyOf, parentOf, stem } from './paths';
 import {
   ConflictError,
   CursorResetError,
@@ -147,13 +147,13 @@ export class Engine {
     // An empty sheet that never reached Dropbox has nothing worth keeping,
     // but any notes written for it do.
     if (item.kind === 'file' && !item.rev && !item.text) {
-      const notes = this.files.get(keyOf(notesPathFor(item.path)));
+      const companions = this.companionFiles(item.path);
       this.remove(item.key);
-      if (notes) {
+      for (const companion of companions) {
         this.ensureFolder(TRASH);
-        this.move(notes, this.freePath(TRASH, stem(baseName(notes.path)), '.md'));
-        const moved = this.byId(notes.id);
-        if (moved) this.put({ ...moved, trashedFrom: parentOf(notes.path) });
+        this.move(companion, this.freePath(TRASH, stem(baseName(companion.path)), '.md'));
+        const moved = this.byId(companion.id);
+        if (moved) this.put({ ...moved, trashedFrom: parentOf(companion.path) });
       }
       return null;
     }
@@ -173,11 +173,7 @@ export class Engine {
   deletePermanently(key: string): boolean {
     const item = this.files.get(key);
     if (!item || item.key === keyOf(TRASH) || !isWithin(item.path, TRASH)) return false;
-    const targets = [item];
-    if (item.kind === 'file') {
-      const notes = this.files.get(keyOf(notesPathFor(item.path)));
-      if (notes) targets.push(notes);
-    }
+    const targets = [item, ...(item.kind === 'file' ? this.companionFiles(item.path) : [])];
     for (const target of targets) {
       const onRemote = this.all().some((f) => isWithin(f.path, target.path) && (f.kind === 'file' ? f.rev : f.onRemote));
       // Anything still waiting to be sent there has nothing to send any more.
@@ -523,13 +519,23 @@ export class Engine {
     }
   }
 
-  /** Moves an item (and a sheet's notes file) here and, if it's on Dropbox, there too. */
-  private moveWithNotes(item: LocalFile, target: string): void {
-    this.move(item, target);
-    if (item.kind === 'file') {
-      const notes = this.files.get(keyOf(notesPathFor(item.path)));
-      if (notes) this.move(notes, notesPathFor(target));
+  /** A sheet's hidden companions (its notes and cuts files) that exist here. */
+  private companionFiles(sheetPath: string): LocalFile[] {
+    const found: LocalFile[] = [];
+    for (const path of companionsOf(sheetPath)) {
+      const file = this.files.get(keyOf(path));
+      if (file) found.push(file);
     }
+    return found;
+  }
+
+  /** Moves an item (and a sheet's notes and cuts) here and, if it's on Dropbox, there too. */
+  private moveWithNotes(item: LocalFile, target: string): void {
+    const companions = item.kind === 'file' ? companionsOf(item.path) : [];
+    const targets = companionsOf(target);
+    const moving = companions.map((path, i) => [this.files.get(keyOf(path)), targets[i]!] as const);
+    this.move(item, target);
+    for (const [file, to] of moving) if (file) this.move(file, to);
   }
 
   private move(item: LocalFile, target: string): void {
