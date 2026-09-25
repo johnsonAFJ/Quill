@@ -71,3 +71,10 @@ describe('the line of the day', () => {
     expect(QUOTES.halloween.every((q) => q.line.length > 0 && q.from.includes(','))).toBe(true);
   });
 });
+
+describe('the preview’s end', () => {
+  it('closed at noon Eastern on the 25th, the morning after it was asked for', () => {
+    expect(previewOpen(new Date('2026-09-25T15:59:00Z'))).toBe(true);
+    expect(previewOpen(new Date('2026-09-25T16:01:00Z'))).toBe(false);
+  });
+});

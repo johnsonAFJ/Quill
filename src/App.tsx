@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { applyTheme, deviceName, prefs, type Theme } from './app/device';
-import { applySeason, previewOpen, seasonNow, type SeasonChoice } from './app/season';
+import { refreshSeason, watchSeason } from './app/season';
 import { describeError, disconnect, dropboxClient, finishSignInIfReturning, isConnected, startSignIn } from './dropbox/connection';
 import { DeviceStore } from './sync/deviceStore';
 import { DropboxRemote } from './sync/dropboxRemote';
@@ -17,14 +17,8 @@ export function App() {
 
   useEffect(() => {
     applyTheme(prefs.get<Theme>('theme', 'auto'));
-    const now = new Date();
-    // Once the preview has closed, "show me now" quietly becomes "when it's time".
-    let choice = prefs.get<SeasonChoice>('season', 'auto');
-    if (choice === 'on' && !previewOpen(now)) {
-      choice = 'auto';
-      prefs.set('season', choice);
-    }
-    applySeason(seasonNow(now, choice, prefs.get<string[]>('seasonsSkipped', [])));
+    refreshSeason();
+    const stopWatching = watchSeason();
     (async () => {
       try {
         const signInError = await finishSignInIfReturning();
@@ -44,6 +38,7 @@ export function App() {
     })();
     // Ask the browser not to clear Quill's on-device copy when space runs low.
     void navigator.storage?.persist?.();
+    return stopWatching;
   }, []);
 
   if (status.state === 'starting') return <div className="splash" />;

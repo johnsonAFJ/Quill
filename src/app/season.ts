@@ -5,6 +5,8 @@
 // You can turn a season on any time to see it, switch seasons off for good,
 // or skip just this year's.
 
+import { prefs } from './device';
+
 export type SeasonId = 'halloween';
 
 export type Season = {
@@ -22,11 +24,12 @@ export type Season = {
 export const SEASONS: Season[] = [{ id: 'halloween', name: 'Halloween', from: [10, 8], to: [11, 1], when: 'sometime in October, through November 1' }];
 
 /**
- * A look at a season before its day comes. Alex asked for the preview to close
- * at noon Eastern on 2026-09-26 so the real thing arrives as a surprise; after
+ * A look at a season before its day comes. Alex asked (at 1:45 a.m. on the
+ * 25th) for the preview to close "at noon tomorrow" — noon Eastern on
+ * 2026-09-25, after he'd slept — so the real thing arrives as a surprise. After
  * that, "Show me now" behaves like "When it's time" and Settings stops offering it.
  */
-export const PREVIEW_UNTIL = new Date('2026-09-26T16:00:00Z');
+export const PREVIEW_UNTIL = new Date('2026-09-25T16:00:00Z');
 
 export const previewOpen = (now: Date): boolean => now < PREVIEW_UNTIL;
 
@@ -119,4 +122,35 @@ export function quoteOfDay(season: Season, date: Date): Quote | null {
 export function applySeason(season: Season | null): void {
   if (season) document.documentElement.dataset.season = season.id;
   else delete document.documentElement.dataset.season;
+}
+
+/**
+ * Works out today's season from your settings and paints it. Once the preview
+ * has closed, "show me now" quietly becomes "when it's time".
+ */
+export function refreshSeason(now = new Date()): void {
+  let choice = prefs.get<SeasonChoice>('season', 'auto');
+  if (choice === 'on' && !previewOpen(now)) {
+    choice = 'auto';
+    prefs.set('season', choice);
+  }
+  applySeason(seasonNow(now, choice, prefs.get<string[]>('seasonsSkipped', [])));
+}
+
+/**
+ * Keeps the season right while Quill stays open: a season arrives (or a
+ * preview ends) without a restart. Checked when you come back to the app and
+ * every few minutes otherwise.
+ */
+export function watchSeason(): () => void {
+  const check = () => refreshSeason();
+  const visible = () => document.visibilityState === 'visible' && check();
+  document.addEventListener('visibilitychange', visible);
+  window.addEventListener('focus', check);
+  const timer = setInterval(check, 5 * 60_000);
+  return () => {
+    document.removeEventListener('visibilitychange', visible);
+    window.removeEventListener('focus', check);
+    clearInterval(timer);
+  };
 }
