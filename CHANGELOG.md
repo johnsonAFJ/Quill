@@ -9,8 +9,8 @@ Newest first. Each "##" heading is one update. Quill shows the updates you haven
 - 👻 **Not in the mood?** Settings → Seasonal look → "Not this year" puts the costume away until next October, and "Off" retires seasons for good.
 - 🕸️ It packs itself away on November 1. Happy Halloween — go write something that makes the reader check the locks.
 
-## Sep 25 · The banned-word tally moved out of the way
-- The tally now sits in a slim strip under the writing instead of floating over it, and the word count rides above the strip. Nothing overlaps your words.
+## Sep 25 · One quiet strip under the writing
+- The **word count and the banned-word tally now share a slim strip** beneath the sheet: what you overused on the left, how much you wrote on the right. Neither floats over your words any more. Clicking the count still puts it away, and the strip disappears when there's nothing to say.
 
 ## Sep 25 · Buttons instead of a long menu
 - **The modes moved onto the bar** beside the outline and paperclip: **focus**, **typewriter**, **sprint**, **word count** and **Export PDF**, each lighting up when it's on. The ••• menu is a third shorter.

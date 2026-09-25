@@ -157,16 +157,18 @@ export function EditorPane(props: Props) {
         </aside>
       )}
       {touch && typing && !readOnly && <FormatBar viewRef={viewRef} floating />}
-      {tally.length > 0 && (
-        <footer className="editor-foot" title="Words from your banned list (••• → Banned words)">
-          <span className="tally">{tallyLabel(tally)}</span>
+      {(tally.length > 0 || showWords) && (
+        <footer className="editor-foot">
+          <span className="tally" title="Words from your banned list (••• → Banned words)">
+            {tallyLabel(tally)}
+          </span>
+          {showWords && (
+            <button className="word-count" onClick={onToggleWords} title="Hide the word count">
+              {selectedWords > 0 ? `${selectedWords.toLocaleString()} of ` : ''}
+              {words.toLocaleString()} word{words === 1 ? '' : 's'}
+            </button>
+          )}
         </footer>
-      )}
-      {showWords && (
-        <button className="word-count" onClick={onToggleWords} title="Hide word count">
-          {selectedWords > 0 ? `${selectedWords.toLocaleString()} of ` : ''}
-          {words.toLocaleString()} word{words === 1 ? '' : 's'}
-        </button>
       )}
     </main>
   );
