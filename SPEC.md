@@ -209,7 +209,7 @@ Checked in Chrome on the Mac with the real Dropbox: adding notes as cards, the p
 - Try Quill on real devices: iPhone keyboard toolbar, swipe back, a real two-device conflict, the final Save as PDF step, installing on the iPad.
 
 ### Ongoing
-- Seasonal themes: **Halloween built 2026-09-25**, deliberately left out of `CHANGELOG.md` until release day so no "What's new" pop-up gives it away. It runs October 15 to November 1 (`SEASONS` in `src/app/season.ts`; change `from` to `[10, 1]` for an October 1 start). Settings → Seasonal look: "When it's time" (the default), "Show me now" (any day, for a look), "Off", and "Not this year" while one is showing. Only the frame changes: sidebar, list, lines, accents and a small 🎃 beside "Library"; the writing area keeps its own colours. More seasons go in the same list.
+- Seasonal themes: **Halloween built 2026-09-25**, deliberately left out of `CHANGELOG.md` until release day so no "What's new" pop-up gives it away. It runs October 15 to November 1 (`SEASONS` in `src/app/season.ts`; change `from` to `[10, 1]` for an October 1 start). Settings → Seasonal look: "When it's time" (the default), "Show me now" (any day, for a look), "Off", and "Not this year" while one is showing. Most of it lands on the frame: deep aubergine sidebars, a still candlelight glow at the top of each, a cobweb masked into the Library's top corner, pumpkin accents and a small 🎃 beside "Library". The writing area only warms a shade (a hint of candle in the paper), which bends the original "never the writing area" rule on purpose, for the mood; nothing anywhere moves, flickers or animates. More seasons go in the same list.
 
   Release day: paste this at the top of `CHANGELOG.md`, with the date it goes live.
 
