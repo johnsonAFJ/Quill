@@ -12,6 +12,7 @@ Newest first. Each "##" heading is one update. Quill shows the updates you haven
 ## Sep 25 · Number shortcuts fixed
 - **⌘1, ⌘2, ⌘3 (headings) and ⌘⇧8 (list) work again.** With ⌘ held, Safari reports those keys differently, and Quill was missing them. It now goes by the key you actually pressed.
 - **⌥⌘1, ⌥⌘2, ⌥⌘3** make headings too, for anywhere the browser keeps ⌘1–⌘3 for itself.
+- **Folding from anywhere in a section:** Option + Command + **[** (the key right of P) now folds the section your cursor is in, not only when you're on its heading. Option + Command + **]** opens it again. The shortcuts list spells the keys out.
 
 ## Sep 25 · Move sheets and groups
 - **Move anything:** a sheet's ••• menu has **Move to…**, and a group's has **Move group to…**. Pick where it goes from a list of your groups, or "Inbox" for the top of the Library. A sheet's notes and cuts go with it; a group takes everything inside it.

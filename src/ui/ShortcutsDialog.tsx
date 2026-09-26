@@ -22,7 +22,7 @@ const GROUPS: { title: string; keys: [string, string][] }[] = [
       ['⌘⇧F', 'Just the text (hide the sidebars)'],
       ['⌥⌘S', 'Start or end a sprint'],
       ['⌘⇧X', 'Set aside the selection (or this paragraph) in Cuts'],
-      ['⌥⌘[  ⌥⌘]', 'Fold the section you’re in down to its heading, or open it again'],
+      ['⌥⌘ [   ⌥⌘ ]', 'Option, Command and the [ key (right of P) folds the section you’re in down to its heading; with ] it opens again'],
     ],
   },
   {
