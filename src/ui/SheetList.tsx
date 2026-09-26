@@ -24,9 +24,18 @@ type Props = {
   trash?: { groups: TrashedGroup[]; onRestore: (key: string) => void; onDelete: (key: string, name: string) => void };
   /** Keys of sheets with changes that haven't reached Dropbox. */
   unsynced: Set<string>;
+  /** Sheets (and groups) picked to move or trash together. */
+  picked?: Set<string>;
+  /** ⌘-click (or a tap while selecting) toggles one; ⇧-click picks everything between. */
+  onPick?: (key: string, how: 'toggle' | 'range') => void;
+  /** Tapping picks instead of opening: the "Select" button, for touch screens especially. */
+  selecting?: boolean;
+  onToggleSelecting?: () => void;
+  /** What a drag carries: the whole selection when the dragged sheet is part of it. */
+  dragKeys?: (key: string) => string[];
 };
 
-export function SheetList({ title, sheets, selectedKey, sort, onSort, onOpen, onMove, onBack, onNew, onPrompt, whereOf, menu, trash, unsynced }: Props) {
+export function SheetList({ title, sheets, selectedKey, sort, onSort, onOpen, onMove, onBack, onNew, onPrompt, whereOf, menu, trash, unsynced, picked, onPick, selecting = false, onToggleSelecting, dragKeys }: Props) {
   const hold = useLongPress((key) => onMove?.(key));
   const empty = sheets.length === 0 && (trash?.groups.length ?? 0) === 0;
   return (
@@ -58,6 +67,11 @@ export function SheetList({ title, sheets, selectedKey, sort, onSort, onOpen, on
               <Icon name="plus" />
             </button>
           )}
+          {onToggleSelecting && !trash && sheets.length > 0 && (
+            <button className={`icon-button select-toggle${selecting ? ' on' : ''}`} aria-pressed={selecting} title="Pick several sheets to move or trash (⌘-click works too)" onClick={onToggleSelecting}>
+              {selecting ? 'Done' : 'Select'}
+            </button>
+          )}
           {menu && <MenuButton items={menu} label="Group actions" />}
         </div>
         <h1>{title}</h1>
@@ -87,12 +101,26 @@ export function SheetList({ title, sheets, selectedKey, sort, onSort, onOpen, on
         {sheets.map((s) => (
           <div
             key={s.key}
-            className={`sheet-card${s.key === selectedKey ? ' active' : ''}`}
+            className={`sheet-card${s.key === selectedKey && !selecting ? ' active' : ''}${picked?.has(s.key) ? ' picked' : ''}${selecting ? ' selecting' : ''}`}
             draggable={!trash && !isTouch()}
-            onDragStart={(e) => startDrag(e, s.key)}
-            {...(!trash && onMove && isTouch() ? hold(s.key) : {})}
+            onDragStart={(e) => startDrag(e, dragKeys ? dragKeys(s.key) : [s.key])}
+            {...(!trash && onMove && isTouch() && !selecting ? hold(s.key) : {})}
           >
-            <button className="card-main" onClick={() => onOpen(s.key)}>
+            <button
+              className="card-main"
+              aria-pressed={selecting ? Boolean(picked?.has(s.key)) : undefined}
+              onClick={(e) => {
+                if (trash || !onPick) return onOpen(s.key);
+                if (selecting || e.metaKey || e.ctrlKey) onPick(s.key, 'toggle');
+                else if (e.shiftKey) onPick(s.key, 'range');
+                else onOpen(s.key);
+              }}
+            >
+              {selecting && (
+                <span className="card-tick" aria-hidden="true">
+                  {picked?.has(s.key) && <Icon name="check" size={12} />}
+                </span>
+              )}
               <div className="card-title">
                 {unsynced.has(s.key) && <span className="dot" aria-label="Not synced yet" />}
                 <span className="card-name">{s.title || 'New sheet'}</span>

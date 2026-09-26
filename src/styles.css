@@ -463,6 +463,58 @@ button.danger {
   user-select: none;
 }
 
+/* Picked to move or trash together. */
+.sheet-card.picked,
+.library-row.picked {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+.sheet-card.selecting .card-main {
+  padding-left: 2.3rem;
+}
+
+.card-tick {
+  position: absolute;
+  left: 0.8rem;
+  top: 0.95rem;
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 0 1.5px var(--muted);
+}
+
+.sheet-card.picked .card-tick {
+  background: var(--accent);
+  color: var(--accent-text);
+  box-shadow: none;
+}
+
+.select-toggle {
+  font-size: 0.85rem;
+  padding: 0.3rem 0.5rem;
+}
+
+.selection-bar {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 1rem);
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.55rem 0.45rem 0.9rem;
+  border-radius: 12px;
+  background: var(--sidebar);
+  box-shadow: var(--shadow), 0 0 0 1px var(--line);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
 /* A group lighting up under something being dragged onto it. */
 .library-row.drop-over {
   background: color-mix(in srgb, var(--accent) 22%, var(--hover));

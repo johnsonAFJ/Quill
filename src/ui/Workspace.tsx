@@ -141,7 +141,11 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showCuts, setShowCuts] = useState(false);
   /** The sheet or group being moved with the "Move to…" picker. */
-  const [moving, setMoving] = useState<string | null>(null);
+  const [moving, setMovingKeys] = useState<string[] | null>(null);
+  const setMoving = (key: string | null) => setMovingKeys(key ? [key] : null);
+  /** Sheets and groups picked to move or trash together (⌘-click, ⇧-click, or Select). */
+  const [picked, setPicked] = useState<string[]>([]);
+  const [selecting, setSelecting] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [outlineOpen, setOutlineOpen] = usePref('outline', false);
   /** How much of the side column the outline takes when notes are open too. */
@@ -448,22 +452,71 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
    * keeps whatever you had open in view: the open sheet, or the group you're in,
    * follows it even when it was inside the thing that moved.
    */
-  const moveItem = (key: string, folder: string) => {
-    const item = engine.get(key);
-    if (!item) return;
-    const from = item.path;
-    const newKey = engine.moveTo(key, folder);
-    setMoving(null);
-    if (!newKey) return;
-    const to = engine.get(newKey)?.path;
-    if (!to) return;
-    const follow = (path: string) => (isWithin(path, from) ? keyOf(to + path.slice(from.length)) : null);
-    const openSheet_ = sheet?.path ? follow(sheet.path) : null;
-    if (openSheet_) setSheetKey(openSheet_);
-    const openGroup = group?.path ? follow(group.path) : null;
-    if (openGroup) setGroupKey(openGroup);
+  /** Leaves out anything inside a group that's also going: it travels with its group. */
+  const topLevel = (keys: string[]) => {
+    const items = keys.map((k) => engine.get(k)).filter((f): f is NonNullable<typeof f> => Boolean(f));
+    return items.filter((f) => !items.some((other) => other !== f && other.kind === 'folder' && isWithin(f.path, other.path)));
   };
-  const movingItem = moving ? engine.get(moving) : undefined;
+
+  const moveItems = (keys: string[], folder: string) => {
+    let openSheetPath = sheet?.path ?? null;
+    let openGroupPath = group?.path ?? null;
+    for (const item of topLevel(keys)) {
+      const from = item.path;
+      const newKey = engine.moveTo(item.key, folder);
+      const to = newKey ? engine.get(newKey)?.path : undefined;
+      if (!to) continue;
+      const follow = (path: string | null) => (path && isWithin(path, from) ? to + path.slice(from.length) : path);
+      openSheetPath = follow(openSheetPath);
+      openGroupPath = follow(openGroupPath);
+    }
+    if (openSheetPath && keyOf(openSheetPath) !== currentKey) setSheetKey(keyOf(openSheetPath));
+    if (openGroupPath && group && keyOf(openGroupPath) !== group.key) setGroupKey(keyOf(openGroupPath));
+    setMovingKeys(null);
+    endSelecting();
+  };
+
+  /** Moves sheets and groups to Trash. Everything in Trash can be put back. */
+  const trashItems = (keys: string[]) => {
+    for (const item of topLevel(keys)) {
+      if (sheet?.path && isWithin(sheet.path, item.path)) setSheetKey(null);
+      if (group?.path && isWithin(group.path, item.path)) setGroupKey(keyOf(parentOf(item.path)) || INBOX);
+      engine.trash(item.key);
+    }
+    endSelecting();
+  };
+
+  // ---- Picking several at once ----
+  const endSelecting = () => {
+    setPicked([]);
+    setSelecting(false);
+  };
+  /** ⌘-click (or a tap while selecting) toggles one; ⇧-click adds every sheet between it and the last one picked. */
+  const pick = (key: string, how: 'toggle' | 'range' = 'toggle') => {
+    setPicked((now) => {
+      if (how === 'range' && now.length) {
+        const order = listSheetsRef.current.map((s) => s.key);
+        const a = order.indexOf(now[now.length - 1]!);
+        const b = order.indexOf(key);
+        if (a !== -1 && b !== -1) {
+          const run = order.slice(Math.min(a, b), Math.max(a, b) + 1);
+          return [...now.filter((k) => !run.includes(k)), ...run];
+        }
+      }
+      return now.includes(key) ? now.filter((k) => k !== key) : [...now, key];
+    });
+  };
+  /** A drag carries the whole selection when the thing dragged is part of it. */
+  const dragKeys = (key: string) => (picked.includes(key) ? picked : [key]);
+  const pickedSet = useMemo(() => new Set(picked), [picked]);
+  const listSheetsRef = useRef<{ key: string }[]>([]);
+  // A new group or view starts with nothing picked.
+  useEffect(() => {
+    setPicked([]);
+    setSelecting(false);
+  }, [groupKey]);
+
+  const movingItems = (moving ?? []).map((k) => engine.get(k)).filter((f): f is NonNullable<typeof f> => Boolean(f));
 
   // ---- Cuts: text set aside from the sheet, kept beside it ----
   const cutsPath = sheet?.kind === 'file' ? cutsPathFor(sheet.path) : null;
@@ -658,8 +711,8 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
 
   // The shortcut handler below is set up once; this keeps it using the latest versions.
   const toggleSprint = () => (activeSprint ? endSprint(false) : currentKey && !readOnly && setSprintChoosing(true));
-  const shortcuts = useRef({ newInboxSheet, toggleSprint, toggleSearch, findInSheet, setAside, stopReading, sprinting: Boolean(activeSprint), reading: Boolean(reading) });
-  shortcuts.current = { newInboxSheet, toggleSprint, toggleSearch, findInSheet, setAside, stopReading, sprinting: Boolean(activeSprint), reading: Boolean(reading) };
+  const shortcuts = useRef({ newInboxSheet, toggleSprint, toggleSearch, findInSheet, setAside, stopReading, endSelecting, picking: picked.length > 0 || selecting, sprinting: Boolean(activeSprint), reading: Boolean(reading) });
+  shortcuts.current = { newInboxSheet, toggleSprint, toggleSearch, findInSheet, setAside, stopReading, endSelecting, picking: picked.length > 0 || selecting, sprinting: Boolean(activeSprint), reading: Boolean(reading) };
 
   // ⌘⇧F focus mode, ⌘F search, ⌘⇧J quick note, ⌥⌘N new Inbox sheet.
   useEffect(() => {
@@ -667,7 +720,9 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
       // Already handled by the editor (like ⌘F or Esc in the find bar).
       if (e.defaultPrevented) return;
       const mod = e.metaKey || e.ctrlKey;
-      if (e.key === 'Escape' && !document.querySelector('.dialog') && (shortcuts.current.reading || shortcuts.current.sprinting)) {
+      if (e.key === 'Escape' && !document.querySelector('.dialog') && shortcuts.current.picking) {
+        shortcuts.current.endSelecting();
+      } else if (e.key === 'Escape' && !document.querySelector('.dialog') && (shortcuts.current.reading || shortcuts.current.sprinting)) {
         if (shortcuts.current.reading) shortcuts.current.stopReading();
         if (shortcuts.current.sprinting) endSprint(false);
       } else if (mod && e.altKey && e.code === 'KeyS') {
@@ -859,7 +914,7 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
   const recent = allSheets.filter((s) => s.modified > Date.now() - WEEK_MS);
   const TITLES: Record<string, string> = { [TRASH_VIEW]: 'Trash', [ALL_VIEW]: 'All', [RECENT_VIEW]: 'Last 7 Days' };
   const listTitle = TITLES[groupKey] ?? (group === library.root ? 'Inbox' : (group?.name ?? ''));
-  const listSheets = sortSheets(inTrash ? library.trash : groupKey === ALL_VIEW ? allSheets : groupKey === RECENT_VIEW ? recent : (group?.sheets ?? []), sort);
+  const listSheets = (listSheetsRef.current = sortSheets(inTrash ? library.trash : groupKey === ALL_VIEW ? allSheets : groupKey === RECENT_VIEW ? recent : (group?.sheets ?? []), sort));
   const acrossGroups = groupKey === ALL_VIEW || groupKey === RECENT_VIEW;
   const texts = useMemo(() => new Map(engine.all().map((f) => [f.key, f.text ?? ''])), [engine, revision]);
   const hits = useMemo(() => (groupKey === SEARCH_VIEW ? search(library, texts, query) : []), [groupKey, library, texts, query]);
@@ -877,7 +932,11 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
       onToggle={toggleCollapsed}
       onNewGroup={() => newGroup('')}
       onSettings={() => setSettingsOpen(true)}
-      onDropItem={layout === 'narrow' ? undefined : moveItem}
+      onDropItems={layout === 'narrow' ? undefined : moveItems}
+      onTrashItems={layout === 'narrow' ? undefined : trashItems}
+      picked={pickedSet}
+      onPick={(key) => pick(key)}
+      dragKeys={dragKeys}
       onMoveGroup={setMoving}
     />
   );
@@ -909,6 +968,11 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
       onSort={setSort}
       onOpen={openSheet}
       onMove={setMoving}
+      picked={pickedSet}
+      onPick={pick}
+      selecting={selecting}
+      onToggleSelecting={() => (selecting ? endSelecting() : setSelecting(true))}
+      dragKeys={dragKeys}
       onBack={backToLibrary}
       onNew={group ? newSheet : undefined}
       onPrompt={group ? promptInGroup : undefined}
@@ -1125,17 +1189,31 @@ export function Workspace({ engine, snapshots, onDisconnect }: Props) {
       {sprintChoosing && <SprintDialog onStart={startSprint} onClose={() => setSprintChoosing(false)} />}
       {capturing && <QuickCapture onSave={saveQuickNote} onClose={() => setCapturing(false)} />}
       {showShortcuts && <ShortcutsDialog onClose={() => setShowShortcuts(false)} />}
-      {movingItem && (
+      {movingItems.length > 0 && (
         <MoveDialog
           library={library}
-          item={{
-            path: movingItem.path,
-            name: movingItem.kind === 'folder' ? baseName(movingItem.path) : library.sheets.get(movingItem.key)?.title || stem(baseName(movingItem.path)),
-            isGroup: movingItem.kind === 'folder',
-          }}
-          onMove={(folder) => moveItem(movingItem.key, folder)}
-          onClose={() => setMoving(null)}
+          items={movingItems.map((f) => ({
+            path: f.path,
+            name: f.kind === 'folder' ? baseName(f.path) : library.sheets.get(f.key)?.title || stem(baseName(f.path)),
+            isGroup: f.kind === 'folder',
+          }))}
+          onMove={(folder) => moveItems(movingItems.map((f) => f.key), folder)}
+          onClose={() => setMovingKeys(null)}
         />
+      )}
+      {picked.length > 0 && (
+        <div className="selection-bar" role="toolbar" aria-label="Selected sheets and groups">
+          <span>{picked.length} selected</span>
+          <button className="small" onClick={() => setMovingKeys(picked)}>
+            Move to…
+          </button>
+          <button className="quiet small danger" onClick={() => trashItems(picked)}>
+            Move to Trash
+          </button>
+          <button className="quiet small" onClick={endSelecting}>
+            Done
+          </button>
+        </div>
       )}
       {showTemplates && (
         <TemplatesDialog

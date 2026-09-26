@@ -9,6 +9,12 @@ Newest first. Each "##" heading is one update. Quill shows the updates you haven
 - 👻 **Not in the mood?** Settings → Seasonal look → "Not this year" puts the costume away until next October, and "Off" retires seasons for good.
 - 🕸️ It packs itself away on November 1. Happy Halloween — go write something that makes the reader check the locks.
 
+## Sep 26 · Pick several at once
+- **Select several sheets:** ⌘-click to pick them one by one, or ⇧-click to pick everything between two. On any device, the **Select** button above the sheet list turns taps into ticks.
+- **⌘-click groups** in the Library to add them to the selection too.
+- While anything is picked, a bar at the bottom offers **Move to…** and **Move to Trash**. On a Mac, drag any picked item and the whole selection comes along. Esc (or Done) lets go.
+- **Drag onto Trash:** drop sheets or groups on the Trash row in the Library to throw them away. They can always be put back from Trash.
+
 ## Sep 25 · Number shortcuts fixed
 - **⌘1, ⌘2, ⌘3 (headings) and ⌘⇧8 (list) work again.** With ⌘ held, Safari reports those keys differently, and Quill was missing them. It now goes by the key you actually pressed.
 - **⌥⌘1, ⌥⌘2, ⌥⌘3** make headings too, for anywhere the browser keeps ⌘1–⌘3 for itself.

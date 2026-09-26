@@ -9,8 +9,8 @@ import { Dialog } from './Overlays';
 
 type Props = {
   library: Library;
-  /** What's moving: its path, name and whether it's a group. */
-  item: { path: string; name: string; isGroup: boolean };
+  /** What's moving: each item's path, name and whether it's a group. */
+  items: { path: string; name: string; isGroup: boolean }[];
   onMove: (folder: string) => void;
   onClose: () => void;
 };
@@ -24,19 +24,23 @@ function places(group: Group, depth: number, into: Place[]) {
   }
 }
 
-export function MoveDialog({ library, item, onMove, onClose }: Props) {
+export function MoveDialog({ library, items, onMove, onClose }: Props) {
   const all: Place[] = [{ path: '', name: 'Inbox (top of the Library)', depth: 0 }];
   places(library.root, 0, all);
-  const here = parentOf(item.path);
+  // "Here now" only when everything moving lives in the same place.
+  const parents = new Set(items.map((i) => parentOf(i.path).toLowerCase()));
+  const here = parents.size === 1 ? [...parents][0]! : null;
   // A group can't go inside itself or anything it holds.
-  const allowed = (p: Place) => !(item.isGroup && p.path && isWithin(p.path, item.path));
+  const allowed = (p: Place) => !items.some((i) => i.isGroup && p.path && isWithin(p.path, i.path));
+  const groups = items.filter((i) => i.isGroup).length;
+  const title = items.length === 1 ? `Move “${items[0]!.name}”` : `Move ${items.length} items`;
   const [chosen, setChosen] = useState<string | null>(null);
 
   return (
-    <Dialog title={`Move “${item.name}”`} onClose={onClose}>
+    <Dialog title={title} onClose={onClose}>
       <ul className="move-list">
         {all.filter(allowed).map((p) => {
-          const current = p.path.toLowerCase() === here.toLowerCase();
+          const current = here !== null && p.path.toLowerCase() === here;
           return (
             <li key={p.path || '(inbox)'}>
               <button
@@ -55,7 +59,7 @@ export function MoveDialog({ library, item, onMove, onClose }: Props) {
         })}
       </ul>
       <p className="muted small-print">
-        {item.isGroup ? 'Everything in the group moves with it.' : 'Its notes and cuts move with it.'} On a Mac you can also drag it onto a group in the Library.
+        {groups ? 'A group takes everything inside it along. ' : ''}Sheets bring their notes and cuts. On a Mac you can also drag onto a group in the Library.
       </p>
       <div className="dialog-actions">
         <button className="quiet" onClick={onClose}>

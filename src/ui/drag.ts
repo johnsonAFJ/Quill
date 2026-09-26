@@ -1,18 +1,26 @@
 // Dragging sheets and groups onto groups in the Library (Mac and iPad).
-// The payload is just the item's key; the Workspace does the moving.
+// The payload is the dragged items' keys — one, or everything you've
+// selected; the Workspace does the moving.
 
 import { useRef, type DragEvent, type MouseEvent, type TouchEvent } from 'react';
 
 const TYPE = 'application/x-quill-item';
 
-export function startDrag(e: DragEvent, key: string): void {
-  e.dataTransfer.setData(TYPE, key);
+export function startDrag(e: DragEvent, keys: string[]): void {
+  e.dataTransfer.setData(TYPE, JSON.stringify(keys));
   e.dataTransfer.effectAllowed = 'move';
 }
 
-/** The key being dragged, or null for anything that isn't from Quill (a file from Finder, say). */
-export function draggedKey(e: DragEvent): string | null {
-  return e.dataTransfer.getData(TYPE) || null;
+/** The keys being dragged; none for anything that isn't from Quill (a file from Finder, say). */
+export function draggedKeys(e: DragEvent): string[] {
+  const raw = e.dataTransfer.getData(TYPE);
+  if (!raw) return [];
+  try {
+    const keys: unknown = JSON.parse(raw);
+    return Array.isArray(keys) ? keys.filter((k): k is string => typeof k === 'string') : [];
+  } catch {
+    return [raw];
+  }
 }
 
 export const isQuillDrag = (e: DragEvent): boolean => e.dataTransfer.types.includes(TYPE);

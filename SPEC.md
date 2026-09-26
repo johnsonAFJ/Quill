@@ -216,6 +216,9 @@ A **Writing log** row in the Library opens a month calendar (`src/log/log.ts`, `
 ### Moving (built 2026-09-25)
 `Engine.moveTo(key, folder)` moves a sheet (with its notes and cuts) or a group (with everything inside) into another group, or to the top level with `""`. It never overwrites (a taken name gets a number), refuses to put a group inside itself, and won't move anything into or out of Trash. Ways in: "Move to…" / "Move group to…" menu items open `MoveDialog`; on Mac and iPad, sheet cards and group rows are draggable and Library rows (Inbox = top level) accept drops (`src/ui/drag.ts`); on touch screens a press and hold opens the picker (`useLongPress`), because on iPhone the Library isn't on screen to drop onto. The open sheet and the current group follow a move, even when they were inside the thing that moved.
 
+### Picking several (built 2026-09-26)
+Sheets: ⌘-click toggles, ⇧-click adds the run between the last pick and this one, and a **Select** button in the list header turns plain taps into picks (with tick circles) on any device. Groups: ⌘-click in the Library. A floating bar ("n selected · Move to… · Move to Trash · Done") acts on the lot; Esc clears; changing group clears. Dragging a picked item carries the whole selection (the drag payload is a JSON list of keys). The Trash row is a drop target too. Anything inside a picked group is left out of the batch, since it travels with its group (`topLevel`). The open sheet and group follow a move.
+
 ### Working notes on the sheet bar
 Beside the writing: outline, notes, then (where the window is wider than a phone) focus, typewriter, sprint, word count and Export PDF as buttons that light up when on, with the ••• menu keeping the rest. On a phone those five stay in the menu. The left-hand sidebar button still steps through the columns; the focus button is a plain on/off.
 
