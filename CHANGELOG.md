@@ -9,6 +9,10 @@ Newest first. Each "##" heading is one update. Quill shows the updates you haven
 - 👻 **Not in the mood?** Settings → Seasonal look → "Not this year" puts the costume away until next October, and "Off" retires seasons for good.
 - 🕸️ It packs itself away on November 1. Happy Halloween — go write something that makes the reader check the locks.
 
+## Sep 25 · Number shortcuts fixed
+- **⌘1, ⌘2, ⌘3 (headings) and ⌘⇧8 (list) work again.** With ⌘ held, Safari reports those keys differently, and Quill was missing them. It now goes by the key you actually pressed.
+- **⌥⌘1, ⌥⌘2, ⌥⌘3** make headings too, for anywhere the browser keeps ⌘1–⌘3 for itself.
+
 ## Sep 25 · Move sheets and groups
 - **Move anything:** a sheet's ••• menu has **Move to…**, and a group's has **Move group to…**. Pick where it goes from a list of your groups, or "Inbox" for the top of the Library. A sheet's notes and cuts go with it; a group takes everything inside it.
 - **On the Mac and iPad, just drag:** drop a sheet from the list onto a group in the Library, or drag one group onto another to tuck it inside. Drop a group on **Inbox** to bring it back out to the top level.

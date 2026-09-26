@@ -6,7 +6,7 @@ const GROUPS: { title: string; keys: [string, string][] }[] = [
     keys: [
       ['⌘B', 'Bold'],
       ['⌘I', 'Italic'],
-      ['⌘1  ⌘2  ⌘3', 'Heading 1, 2, 3'],
+      ['⌘1  ⌘2  ⌘3', 'Heading 1, 2, 3 (⌥⌘1, ⌥⌘2, ⌥⌘3 work too)'],
       ['⌘\'', 'Quote'],
       ['⌘⇧8', 'List'],
       ['⌘K', 'Link'],
@@ -22,7 +22,7 @@ const GROUPS: { title: string; keys: [string, string][] }[] = [
       ['⌘⇧F', 'Just the text (hide the sidebars)'],
       ['⌥⌘S', 'Start or end a sprint'],
       ['⌘⇧X', 'Set aside the selection (or this paragraph) in Cuts'],
-      ['⌥⌘[  ⌥⌘]', 'Fold or show the section you’re in'],
+      ['⌥⌘[  ⌥⌘]', 'Fold the section you’re in down to its heading, or open it again'],
     ],
   },
   {

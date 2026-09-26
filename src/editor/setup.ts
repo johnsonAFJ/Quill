@@ -4,7 +4,7 @@
 import { markdown } from '@codemirror/lang-markdown';
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { defaultKeymap, history, historyKeymap, selectLine } from '@codemirror/commands';
-import { EditorState, type Extension } from '@codemirror/state';
+import { EditorState, Prec, type Extension } from '@codemirror/state';
 import { EditorView, keymap, placeholder } from '@codemirror/view';
 import { tags as t } from '@lezer/highlight';
 import { bold, bulletList, insertLink, italic, quote, toggleComment, toggleHeading } from './formatting';
@@ -56,6 +56,10 @@ export const formattingKeys = keymap.of([
   { key: 'Mod-1', run: toggleHeading(1) },
   { key: 'Mod-2', run: toggleHeading(2) },
   { key: 'Mod-3', run: toggleHeading(3) },
+  // The same with Option: browsers keep ⌘1–⌘9 for tabs and bookmarks, and never these.
+  { key: 'Mod-Alt-1', run: toggleHeading(1) },
+  { key: 'Mod-Alt-2', run: toggleHeading(2) },
+  { key: 'Mod-Alt-3', run: toggleHeading(3) },
   { key: 'Mod-k', run: insertLink },
   { key: "Mod-'", run: quote },
   { key: 'Mod-Shift-8', run: bulletList },
@@ -64,6 +68,29 @@ export const formattingKeys = keymap.of([
   { key: 'Mod-l', run: selectLine, preventDefault: true },
 ]);
 
+/**
+ * The number-key shortcuts, recognised by the physical key pressed rather than
+ * by the character it makes. With ⌘ (and ⇧ or ⌥) held, Safari can report a
+ * different character than "1" or "8" — "*", "¡", "™" — and the keymap above
+ * then misses them. This catches them first, on every browser and layout.
+ */
+const numberKeys = Prec.highest(
+  EditorView.domEventHandlers({
+    keydown(event, view) {
+      const mod = navigator.platform.startsWith('Mac') ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
+      if (!mod) return false;
+      const digit = /^Digit([1-8])$/.exec(event.code)?.[1];
+      if (!digit) return false;
+      let run: ((v: EditorView) => boolean) | null = null;
+      if (!event.shiftKey && (digit === '1' || digit === '2' || digit === '3')) run = toggleHeading(Number(digit) as 1 | 2 | 3);
+      else if (event.shiftKey && !event.altKey && digit === '8') run = bulletList;
+      if (!run) return false;
+      event.preventDefault();
+      return run(view);
+    },
+  }),
+);
+
 export function createEditorState(text: string, readOnly: boolean, listeners: Extension, typewriterOn = false): EditorState {
   return EditorState.create({
     doc: text,
@@ -71,6 +98,7 @@ export function createEditorState(text: string, readOnly: boolean, listeners: Ex
       // Files written with Windows line endings keep them.
       text.includes('\r\n') ? EditorState.lineSeparator.of('\r\n') : [],
       history(),
+      numberKeys,
       formattingKeys,
       keymap.of([...historyKeymap, ...defaultKeymap]),
       markdown(),
